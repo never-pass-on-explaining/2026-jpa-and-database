@@ -16,8 +16,8 @@
 
 ### 스터디 커리큘럼
 
-JPA : [자바 ORM 표준 JPA 프로그래밍](https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=241970388)
-Database : [데이터 중심 애플리케이션 설계](https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=299930005)
+- JPA : [자바 ORM 표준 JPA 프로그래밍](https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=241970388)
+- Database : [데이터 중심 애플리케이션 설계](https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=299930005)
 
 추후 오픈
 
