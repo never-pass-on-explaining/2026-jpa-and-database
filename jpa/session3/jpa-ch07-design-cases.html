@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JPA 고급 매핑 설계 케이스</title>
+<style>
+  :root {
+    --bg: #fbfaf7; --surface: #ffffff; --text: #1f2328; --muted: #5b6470;
+    --border: #e4e1da; --accent: #2f6f5e; --accent-soft: #e6f0ec;
+    --warn: #9a5b12; --warn-soft: #fbf1e3; --code-bg: #f3f1ec; --code-text: #24292f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181b; --surface: #1d2024; --text: #e6e6e3; --muted: #9aa1a9;
+      --border: #2e3237; --accent: #7cc4ad; --accent-soft: #1f302b;
+      --warn: #e0a95c; --warn-soft: #2f2619; --code-bg: #111315; --code-text: #dcdcd8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181b; --surface: #1d2024; --text: #e6e6e3; --muted: #9aa1a9;
+    --border: #2e3237; --accent: #7cc4ad; --accent-soft: #1f302b;
+    --warn: #e0a95c; --warn-soft: #2f2619; --code-bg: #111315; --code-text: #dcdcd8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.7; font-size: 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 16px 80px; }
+  header h1 { font-size: 1.9rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0; }
+  nav.toc {
+    margin: 28px 0 40px; padding: 18px 20px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  nav.toc strong { font-size: 0.85rem; color: var(--muted); letter-spacing: 0.05em; }
+  nav.toc ol { margin: 8px 0 0; padding-left: 20px; }
+  nav.toc ol ol { margin: 2px 0 6px; list-style: none; padding-left: 4px; font-size: 0.93rem; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 56px; }
+  h2 {
+    font-size: 1.45rem; margin: 0 0 20px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); letter-spacing: -0.01em;
+  }
+  .case {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 22px 16px; margin-bottom: 28px;
+  }
+  .case-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; margin-bottom: 6px; }
+  .case-no {
+    font-size: 0.78rem; font-weight: 700; color: var(--surface); background: var(--accent);
+    padding: 2px 8px; border-radius: 4px; letter-spacing: 0.03em;
+  }
+  .case-head h3 { font-size: 1.12rem; margin: 0; flex: 1 1 300px; }
+  .ref { font-size: 0.8rem; color: var(--muted); }
+  h4 { font-size: 0.95rem; margin: 18px 0 6px; color: var(--accent); }
+  p { margin: 6px 0; }
+  ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code {
+    font-family: "JetBrains Mono", "D2Coding", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-text); padding: 14px 16px;
+    border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);
+    font-size: 0.85rem; line-height: 1.55; margin: 8px 0 12px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .table-wrap { overflow-x: auto; margin: 10px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; background: var(--surface); }
+  th, td { border: 1px solid var(--border); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); font-weight: 600; }
+  .box {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 12px 0;
+  }
+  .box.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .box strong:first-child { display: block; margin-bottom: 2px; }
+
+  figure.diagram {
+    margin: 10px 0 14px; padding: 14px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  figure.diagram svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+  figure.diagram figcaption { margin-top: 8px; font-size: 0.86rem; color: var(--muted); }
+  .d-box { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+  .d-head { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  .d-title { fill: var(--text); font-weight: 700; font-size: 14px; text-anchor: middle; }
+  .d-col { fill: var(--text); font-size: 13px; font-family: "JetBrains Mono", "D2Coding", ui-monospace, Menlo, Consolas, monospace; }
+  .d-pk { font-weight: 700; }
+  .d-disc { fill: var(--warn); font-weight: 600; }
+  .d-prop { fill: var(--accent); }
+  .d-tag { fill: var(--accent); font-size: 10px; font-weight: 700; }
+  .d-sep { stroke: var(--border); stroke-width: 1; }
+  .d-line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .d-nonid { stroke-dasharray: 6 4; }
+  .d-mark { stroke: var(--muted); stroke-width: 1.8; }
+  .d-circle { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+  .d-label { fill: var(--text); font-size: 13px; font-weight: 700; }
+  .d-note { fill: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>JPA 고급 매핑</h1>
+</header>
+
+<nav class="toc">
+  <strong>목차</strong>
+  <ol>
+    <li><a href="#s1">공통 매핑 정보 설계</a>
+      <ol><li><a href="#c1">Case 1. 여러 엔티티에 같은 컬럼이 반복된다</a></li></ol></li>
+    <li><a href="#s2">타입별로 달라지는 도메인</a>
+      <ol><li><a href="#c2">Case 2. 타입마다 속성이 다르다</a></li></ol></li>
+    <li><a href="#s3">식별자 설계</a>
+      <ol>
+        <li><a href="#c3">Case 3. 부모에 종속된 자식의 PK</a></li>
+        <li><a href="#c4">Case 4. 레거시 테이블이 복합 키다</a></li>
+        <li><a href="#c5">Case 5. 1:1 확장 정보</a></li>
+      </ol></li>
+    <li><a href="#s4">연관관계 설계</a>
+      <ol>
+        <li><a href="#c6">Case 6. 연결 테이블에 컬럼이 필요해졌다</a></li>
+        <li><a href="#c7">Case 7. 관계가 있을 수도 없을 수도 있다</a></li>
+      </ol></li>
+  </ol>
+</nav>
+
+<!-- ============================ 1 ============================ -->
+<section id="s1">
+  <h2>1. 공통 매핑 정보 설계</h2>
+
+  <article class="case" id="c1">
+    <div class="case-head">
+      <span class="case-no">Case 1</span>
+      <h3>여러 엔티티에 같은 컬럼(id, 등록일, 수정일)이 반복된다</h3>
+      <span class="ref">7장 · @MappedSuperclass, 상속 관계 매핑</span>
+    </div>
+
+    <h4>상황</h4>
+    <p><code>Member</code>, <code>Seller</code>, <code>Order</code> 모두 <code>createdAt</code>, <code>updatedAt</code>을 가진다. 엔티티마다 복사해 넣기는 싫다.</p>
+
+    <h4>선택지</h4>
+    <ul>
+      <li><strong>상속 관계 매핑</strong> (<code>@Inheritance</code>) — 부모도 테이블이 된다</li>
+      <li><strong><code>@MappedSuperclass</code></strong> — 매핑 정보만 물려준다</li>
+    </ul>
+
+    <h4>추천 설계</h4>
+<pre><code>@MappedSuperclass
+public abstract class BaseEntity {
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}
+
+@Entity
+public class Member extends BaseEntity {
+    @Id @GeneratedValue
+    @Column(name = "MEMBER_ID")
+    private Long id;          // id는 엔티티마다 직접 선언
+    private String name;
+}</code></pre>
+
+    <div class="box">
+      <strong>판단 기준: "부모 타입으로 조회할 일이 있는가?"</strong>
+      <code>select b from BaseEntity b</code> 같은 조회는 의미가 없다. 공통 컬럼은 <strong>조회 대상이 아니라 재사용 대상</strong>이므로 <code>@MappedSuperclass</code>가 맞다.
+    </div>
+
+    <h4>id도 BaseEntity에 넣으면?</h4>
+    <p>테이블마다 PK 컬럼명(<code>MEMBER_ID</code>, <code>SELLER_ID</code>...)이 다르면 엔티티마다 재정의가 필요하다.</p>
+<pre><code>@Entity
+@AttributeOverride(name = "id", column = @Column(name = "MEMBER_ID"))
+public class Member extends BaseEntity { ... }</code></pre>
+    <p>모든 엔티티에 오버라이드가 붙게 되므로, <strong>PK 컬럼명이 테이블마다 다르면 id는 각 엔티티에 두고</strong> 날짜 같은 부가 컬럼만 BaseEntity로 올리는 편이 깔끔하다.</p>
+
+    <div class="box warn">
+      <strong>주의</strong>
+      BaseEntity에 실수로 <code>@Entity</code>를 붙이면 상속 관계 매핑이 되어 <code>BASE_ENTITY</code> 테이블이 생기고 조회할 때마다 조인이 발생한다.
+    </div>
+  </article>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section id="s2">
+  <h2>2. 타입별로 달라지는 도메인</h2>
+
+  <article class="case" id="c2">
+    <div class="case-head">
+      <span class="case-no">Case 2</span>
+      <h3>결제수단(카드/계좌이체)처럼 타입마다 속성이 다르다</h3>
+      <span class="ref">7장 · 상속 관계 매핑</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>모든 결제는 금액·결제일을 가지지만, 카드는 카드번호·할부개월, 계좌이체는 은행명·계좌번호를 가진다. 결제수단은 앞으로 늘어날 수 있다(간편결제 등).</p>
+
+    <h4>선택지와 판단 기준</h4>
+    <div class="table-wrap">
+    <table>
+      <tr><th>이런 상황이면</th><th>선택</th></tr>
+      <tr><td>자식 컬럼이 필수값(not null)이다 / 자식 타입이 늘어날 수 있다 / 특정 자식만 FK로 참조해야 한다</td><td><strong>JOINED</strong></td></tr>
+      <tr><td>자식 고유 컬럼이 1~2개로 단순하다 / 타입이 거의 안 늘어난다 / 부모 타입 목록 조회가 잦다</td><td><strong>SINGLE_TABLE</strong></td></tr>
+      <tr><td>—</td><td>TABLE_PER_CLASS는 쓰지 않는다 (부모 조회 시 UNION)</td></tr>
+    </table>
+    </div>
+
+    <h4>추천 설계: 결제수단 → JOINED</h4>
+    <p>카드번호·은행명은 반드시 있어야 하는 값이고, 결제수단도 늘어날 수 있으므로 JOINED가 맞다.</p>
+    <figure class="diagram">
+      <svg viewBox="0 0 640 318" role="img" aria-label="결제수단 조인 전략 ER 다이어그램: PAYMENT 부모 테이블과 CARD_PAYMENT, BANK_PAYMENT 자식 테이블">
+        <path d="M160 200 V165 H290 V128" class="d-line"/>
+        <path d="M480 200 V165 H350 V128" class="d-line"/>
+        <line x1="283" y1="137" x2="297" y2="137" class="d-mark"/>
+        <line x1="343" y1="137" x2="357" y2="137" class="d-mark"/>
+        <line x1="153" y1="193" x2="167" y2="193" class="d-mark"/>
+        <circle cx="160" cy="183" r="4.5" class="d-circle"/>
+        <line x1="473" y1="193" x2="487" y2="193" class="d-mark"/>
+        <circle cx="480" cy="183" r="4.5" class="d-circle"/>
+
+        <rect x="220" y="20" width="200" height="108" rx="6" class="d-box"/>
+        <path d="M220 50 V26 a6 6 0 0 1 6 -6 H414 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="320" y="40" class="d-title">PAYMENT</text>
+        <text x="232" y="67" class="d-tag">PK</text><text x="282" y="67" class="d-col d-pk">PAYMENT_ID</text>
+        <line x1="220" y1="76" x2="420" y2="76" class="d-sep"/>
+        <text x="282" y="93" class="d-col">AMOUNT</text>
+        <text x="282" y="119" class="d-col d-disc">DTYPE</text>
+
+        <rect x="60" y="200" width="200" height="108" rx="6" class="d-box"/>
+        <path d="M60 230 V206 a6 6 0 0 1 6 -6 H254 a6 6 0 0 1 6 6 V230 z" class="d-head"/>
+        <text x="160" y="220" class="d-title">CARD_PAYMENT</text>
+        <text x="72" y="247" class="d-tag">PK,FK</text><text x="122" y="247" class="d-col d-pk d-prop">PAYMENT_ID</text>
+        <line x1="60" y1="256" x2="260" y2="256" class="d-sep"/>
+        <text x="122" y="273" class="d-col">CARD_NUMBER</text>
+        <text x="122" y="299" class="d-col">INSTALLMENT</text>
+
+        <rect x="380" y="200" width="200" height="108" rx="6" class="d-box"/>
+        <path d="M380 230 V206 a6 6 0 0 1 6 -6 H574 a6 6 0 0 1 6 6 V230 z" class="d-head"/>
+        <text x="480" y="220" class="d-title">BANK_PAYMENT</text>
+        <text x="392" y="247" class="d-tag">PK,FK</text><text x="442" y="247" class="d-col d-pk d-prop">PAYMENT_ID</text>
+        <line x1="380" y1="256" x2="580" y2="256" class="d-sep"/>
+        <text x="442" y="273" class="d-col">BANK_NAME</text>
+        <text x="442" y="299" class="d-col">ACCOUNT_NO</text>
+      </svg>
+      <figcaption>결제수단이 추가되면 테이블만 하나 늘리면 된다. 자식 테이블 컬럼에 not null을 걸 수 있다.</figcaption>
+    </figure>
+<pre><code>@Entity
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn
+public abstract class Payment {
+    @Id @GeneratedValue
+    @Column(name = "PAYMENT_ID")
+    private Long id;
+    private int amount;
+}
+
+@Entity
+@DiscriminatorValue("CARD")
+public class CardPayment extends Payment {
+    @Column(nullable = false)
+    private String cardNumber;
+    private int installment;
+}</code></pre>
+
+    <h4>반대 예: 알림(이메일/SMS) → SINGLE_TABLE</h4>
+    <p>이메일은 수신주소, SMS는 전화번호 정도로 자식 고유 컬럼이 1개뿐이고, "내 알림 목록"처럼 부모 타입으로 조회하는 일이 대부분이다. 이럴 때는 조인 없는 SINGLE_TABLE이 낫다.</p>
+
+    <div class="box warn">
+      <strong>주의</strong>
+      상속 계층은 1단계로 유지한다. 계층이 깊어지면 JOINED는 조인이, SINGLE_TABLE은 null 컬럼이 급격히 늘어난다.
+    </div>
+  </article>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section id="s3">
+  <h2>3. 식별자 설계</h2>
+
+  <article class="case" id="c3">
+    <div class="case-head">
+      <span class="case-no">Case 3</span>
+      <h3>부모에 종속된 자식(주문-주문상품)의 PK를 어떻게 잡을까</h3>
+      <span class="ref">7장 · 식별 관계 / 비식별 관계</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>주문상품은 주문 없이 존재할 수 없다. 주문상품의 PK를 주문 ID를 포함한 복합 키로 할지, 독립적인 대리 키로 할지 정해야 한다.</p>
+
+    <h4>선택지</h4>
+    <figure class="diagram">
+      <svg viewBox="0 0 640 296" role="img" aria-label="식별 관계와 비식별 관계 비교 ER 다이어그램: 주문과 주문상품">
+        <text x="10" y="18" class="d-label">① 식별 관계</text>
+        <line x1="190" y1="71" x2="300" y2="71" class="d-line"/>
+        <line x1="202" y1="64" x2="202" y2="78" class="d-mark"/>
+        <circle cx="276" cy="71" r="4.5" class="d-circle"/>
+        <line x1="286" y1="71" x2="300" y2="63" class="d-mark"/>
+        <line x1="286" y1="71" x2="300" y2="79" class="d-mark"/>
+
+        <rect x="10" y="28" width="180" height="82" rx="6" class="d-box"/>
+        <path d="M10 58 V34 a6 6 0 0 1 6 -6 H184 a6 6 0 0 1 6 6 V58 z" class="d-head"/>
+        <text x="100" y="48" class="d-title">ORDERS</text>
+        <text x="22" y="75" class="d-tag">PK</text><text x="68" y="75" class="d-col d-pk">ORDER_ID</text>
+        <line x1="10" y1="84" x2="190" y2="84" class="d-sep"/>
+        <text x="68" y="101" class="d-col">ORDER_DATE</text>
+
+        <rect x="300" y="28" width="220" height="108" rx="6" class="d-box"/>
+        <path d="M300 58 V34 a6 6 0 0 1 6 -6 H514 a6 6 0 0 1 6 6 V58 z" class="d-head"/>
+        <text x="410" y="48" class="d-title">ORDER_ITEM</text>
+        <text x="312" y="75" class="d-tag">PK,FK</text><text x="362" y="75" class="d-col d-pk d-prop">ORDER_ID</text>
+        <text x="312" y="101" class="d-tag">PK</text><text x="362" y="101" class="d-col d-pk">ITEM_SEQ</text>
+        <line x1="300" y1="110" x2="520" y2="110" class="d-sep"/>
+        <text x="362" y="127" class="d-col">ITEM_NAME</text>
+        <text x="536" y="75" class="d-note">PK 컬럼 2개</text>
+
+        <text x="10" y="168" class="d-label">② 필수적 비식별 관계 + 대리 키</text>
+        <line x1="190" y1="221" x2="300" y2="221" class="d-line d-nonid"/>
+        <line x1="202" y1="214" x2="202" y2="228" class="d-mark"/>
+        <circle cx="276" cy="221" r="4.5" class="d-circle"/>
+        <line x1="286" y1="221" x2="300" y2="213" class="d-mark"/>
+        <line x1="286" y1="221" x2="300" y2="229" class="d-mark"/>
+
+        <rect x="10" y="178" width="180" height="82" rx="6" class="d-box"/>
+        <path d="M10 208 V184 a6 6 0 0 1 6 -6 H184 a6 6 0 0 1 6 6 V208 z" class="d-head"/>
+        <text x="100" y="198" class="d-title">ORDERS</text>
+        <text x="22" y="225" class="d-tag">PK</text><text x="68" y="225" class="d-col d-pk">ORDER_ID</text>
+        <line x1="10" y1="234" x2="190" y2="234" class="d-sep"/>
+        <text x="68" y="251" class="d-col">ORDER_DATE</text>
+
+        <rect x="300" y="178" width="220" height="108" rx="6" class="d-box"/>
+        <path d="M300 208 V184 a6 6 0 0 1 6 -6 H514 a6 6 0 0 1 6 6 V208 z" class="d-head"/>
+        <text x="410" y="198" class="d-title">ORDER_ITEM</text>
+        <text x="312" y="225" class="d-tag">PK</text><text x="362" y="225" class="d-col d-pk">ORDER_ITEM_ID</text>
+        <line x1="300" y1="234" x2="520" y2="234" class="d-sep"/>
+        <text x="312" y="251" class="d-tag">FK</text><text x="362" y="251" class="d-col d-prop">ORDER_ID</text>
+        <text x="362" y="277" class="d-col">ITEM_NAME</text>
+        <text x="536" y="225" class="d-note">PK 컬럼 1개</text>
+        <text x="536" y="251" class="d-note">NOT NULL</text>
+      </svg>
+      <figcaption>①은 부모 PK가 자식 PK로 전파된다(실선). ②는 부모 PK를 FK로만 쓰고, 자식은 자기만의 대리 키를 가진다(점선).</figcaption>
+    </figure>
+
+    <h4>추천 설계: ② 필수적 비식별 관계 + 대리 키</h4>
+<pre><code>@Entity
+public class OrderItem {
+    @Id @GeneratedValue
+    @Column(name = "ORDER_ITEM_ID")
+    private Long id;
+
+    @ManyToOne(optional = false)                    // 필수 관계
+    @JoinColumn(name = "ORDER_ID", nullable = false)
+    private Order order;
+
+    private String itemName;
+}</code></pre>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>① 식별 관계</th><th>② 비식별 + 대리 키</th></tr>
+      <tr><td>자식 아래로 테이블이 더 생기면</td><td>PK 컬럼이 계속 늘어남</td><td>항상 PK 1개</td></tr>
+      <tr><td>JPA 매핑</td><td>식별자 클래스 + equals/hashCode 필요</td><td><code>Long id</code> 하나로 끝</td></tr>
+      <tr><td>요구사항 변경</td><td>PK에 비즈니스 의미가 섞여 변경이 어려움</td><td>PK는 의미가 없어 영향 없음</td></tr>
+    </table>
+    </div>
+
+    <div class="box">
+      <strong>필수적(NOT NULL)으로 두는 이유</strong>
+      FK가 항상 있으므로 주문과 함께 조회할 때 <strong>내부 조인</strong>만으로 충분하다. 선택적(nullable)이면 외부 조인이 필요하다.
+    </div>
+  </article>
+
+  <article class="case" id="c4">
+    <div class="case-head">
+      <span class="case-no">Case 4</span>
+      <h3>레거시 테이블이 복합 키로 되어 있다</h3>
+      <span class="ref">7장 · @IdClass / @EmbeddedId</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>기존 성적 테이블 <code>SCORE</code>의 PK가 <code>(STUDENT_NO, SUBJECT_CODE)</code>다. 테이블 구조는 바꿀 수 없고 JPA로 매핑해야 한다.</p>
+
+    <h4>선택지</h4>
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>@IdClass</th><th>@EmbeddedId</th></tr>
+      <tr><td>엔티티 모양</td><td>PK 필드가 엔티티에 그대로 있음</td><td>PK를 식별자 객체 하나로 가짐</td></tr>
+      <tr><td>필드 접근</td><td><code>score.getStudentNo()</code></td><td><code>score.getId().getStudentNo()</code></td></tr>
+      <tr><td>JPQL</td><td><code>s.studentNo</code></td><td><code>s.id.studentNo</code></td></tr>
+      <tr><td>어울리는 경우</td><td>컬럼 중심 기존 쿼리가 많을 때</td><td>식별자를 값 하나로 주고받을 때</td></tr>
+    </table>
+    </div>
+
+    <h4>추천 설계: @EmbeddedId</h4>
+    <p>레거시 복합 키는 "학번 + 과목코드"처럼 <strong>그 자체로 의미 있는 값</strong>인 경우가 많다. 식별자를 하나의 객체로 다루면 메서드 파라미터로 넘기거나 비교하기 편하다. 팀 컨벤션이 있다면 그것을 따른다.</p>
+<pre><code>@Embeddable
+public class ScoreId implements Serializable {
+    @Column(name = "STUDENT_NO")
+    private String studentNo;
+    @Column(name = "SUBJECT_CODE")
+    private String subjectCode;
+
+    protected ScoreId() {}                       // 기본 생성자
+    public ScoreId(String studentNo, String subjectCode) { ... }
+
+    @Override public boolean equals(Object o) {  // 값 비교
+        if (this == o) return true;
+        if (!(o instanceof ScoreId that)) return false;
+        return Objects.equals(studentNo, that.studentNo)
+            &amp;&amp; Objects.equals(subjectCode, that.subjectCode);
+    }
+    @Override public int hashCode() {
+        return Objects.hash(studentNo, subjectCode);
+    }
+}
+
+@Entity
+public class Score {
+    @EmbeddedId
+    private ScoreId id;
+    private int point;
+}
+
+Score score = em.find(Score.class, new ScoreId("2026001", "DB01"));</code></pre>
+
+    <div class="box warn">
+      <strong>식별자 클래스 체크리스트</strong>
+      <code>Serializable</code> 구현 · <code>equals()</code>/<code>hashCode()</code> 구현 · 기본 생성자 · <code>public</code> 클래스. 그리고 <strong>setter를 두지 않는다</strong> — 영속 상태 엔티티의 PK 값을 바꾸면 영속성 컨텍스트가 엔티티를 찾지 못한다.
+    </div>
+  </article>
+
+  <article class="case" id="c5">
+    <div class="case-head">
+      <span class="case-no">Case 5</span>
+      <h3>회원-회원상세처럼 1:1로 확장 정보를 붙여야 한다</h3>
+      <span class="ref">7장 · @MapsId, 일대일 식별 관계</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>회원 테이블은 자주 조회되고, 주소·생년월일 같은 상세 정보는 가끔만 쓴다. 상세 정보를 별도 테이블로 분리한다. 회원 없는 상세 정보는 없다.</p>
+
+    <h4>선택지</h4>
+    <ul>
+      <li><strong>비식별</strong>: <code>MEMBER_DETAIL</code>에 자체 PK + <code>MEMBER_ID</code> FK(유니크)</li>
+      <li><strong>식별</strong>: <code>MEMBER_DETAIL</code>의 PK가 곧 <code>MEMBER_ID</code> (PK 공유)</li>
+    </ul>
+
+    <h4>추천 설계: PK 공유 (@MapsId)</h4>
+    <figure class="diagram">
+      <svg viewBox="0 0 640 136" role="img" aria-label="회원과 회원상세 일대일 식별 관계 ER 다이어그램">
+        <line x1="240" y1="63" x2="400" y2="63" class="d-line"/>
+        <line x1="252" y1="56" x2="252" y2="70" class="d-mark"/>
+        <circle cx="376" cy="63" r="4.5" class="d-circle"/>
+        <line x1="388" y1="56" x2="388" y2="70" class="d-mark"/>
+
+        <rect x="40" y="20" width="200" height="82" rx="6" class="d-box"/>
+        <path d="M40 50 V26 a6 6 0 0 1 6 -6 H234 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="140" y="40" class="d-title">MEMBER</text>
+        <text x="52" y="67" class="d-tag">PK</text><text x="98" y="67" class="d-col d-pk">MEMBER_ID</text>
+        <line x1="40" y1="76" x2="240" y2="76" class="d-sep"/>
+        <text x="98" y="93" class="d-col">NAME</text>
+
+        <rect x="400" y="20" width="200" height="108" rx="6" class="d-box"/>
+        <path d="M400 50 V26 a6 6 0 0 1 6 -6 H594 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="500" y="40" class="d-title">MEMBER_DETAIL</text>
+        <text x="412" y="67" class="d-tag">PK,FK</text><text x="458" y="67" class="d-col d-pk d-prop">MEMBER_ID</text>
+        <line x1="400" y1="76" x2="600" y2="76" class="d-sep"/>
+        <text x="458" y="93" class="d-col">ADDRESS</text>
+        <text x="458" y="119" class="d-col">BIRTH_DATE</text>
+      </svg>
+      <figcaption>회원 1 : 상세 0..1, 식별 관계(실선). 상세 테이블은 별도 PK 컬럼 없이 회원 PK를 그대로 쓴다.</figcaption>
+    </figure>
+<pre><code>@Entity
+public class MemberDetail {
+    @Id
+    private Long id;              // 값은 Member의 id가 그대로 들어감
+
+    @MapsId                       // FK를 PK에도 매핑
+    @OneToOne
+    @JoinColumn(name = "MEMBER_ID")
+    private Member member;
+
+    private String address;
+}</code></pre>
+    <ul>
+      <li>불필요한 PK 컬럼과 유니크 제약이 없다</li>
+      <li>두 테이블이 <strong>PK = PK로 조인</strong>되어 단순하다</li>
+    </ul>
+
+    <div class="box warn">
+      <strong>예외: 나중에 1:N이 될 수 있다면 비식별로</strong>
+      예를 들어 "회원별 배송지"처럼 여러 개가 될 가능성이 있으면, 자체 PK + FK 구조로 두고 FK의 유니크 제약만 풀면 된다. PK를 공유한 구조는 1:N으로 바꾸기 어렵다.
+    </div>
+  </article>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section id="s4">
+  <h2>4. 연관관계 설계</h2>
+
+  <article class="case" id="c6">
+    <div class="case-head">
+      <span class="case-no">Case 6</span>
+      <h3>연결 테이블에 컬럼이 필요해졌다 (수강 신청일, 성적)</h3>
+      <span class="ref">7장 · 조인 테이블, 복합 키</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>학생과 강의는 N:M이다. <code>@JoinTable</code>로 연결 테이블을 매핑했는데, 신청일과 성적을 저장해야 한다는 요구가 왔다.</p>
+
+    <h4>문제</h4>
+    <p><code>@JoinTable</code>은 FK 두 개만 매핑한다. 연결 테이블이 엔티티가 아니라서 <code>ENROLLED_AT</code>, <code>GRADE</code>를 매핑할 필드를 둘 곳이 없다.</p>
+
+    <h4>추천 설계: 연결 테이블을 엔티티로 승격 + 대리 키</h4>
+    <figure class="diagram">
+      <svg viewBox="0 0 690 212" role="img" aria-label="학생, 수강, 강의 ER 다이어그램: 수강 엔티티가 학생과 강의를 각각 외래 키로 참조">
+        <line x1="180" y1="63" x2="240" y2="63" class="d-line d-nonid"/>
+        <line x1="192" y1="56" x2="192" y2="70" class="d-mark"/>
+        <circle cx="216" cy="63" r="4.5" class="d-circle"/>
+        <line x1="226" y1="63" x2="240" y2="55" class="d-mark"/>
+        <line x1="226" y1="63" x2="240" y2="71" class="d-mark"/>
+
+        <line x1="450" y1="63" x2="510" y2="63" class="d-line d-nonid"/>
+        <line x1="464" y1="63" x2="450" y2="55" class="d-mark"/>
+        <line x1="464" y1="63" x2="450" y2="71" class="d-mark"/>
+        <circle cx="474" cy="63" r="4.5" class="d-circle"/>
+        <line x1="498" y1="56" x2="498" y2="70" class="d-mark"/>
+
+        <rect x="10" y="20" width="170" height="82" rx="6" class="d-box"/>
+        <path d="M10 50 V26 a6 6 0 0 1 6 -6 H174 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="95" y="40" class="d-title">STUDENT</text>
+        <text x="22" y="67" class="d-tag">PK</text><text x="58" y="67" class="d-col d-pk">STUDENT_ID</text>
+        <line x1="10" y1="76" x2="180" y2="76" class="d-sep"/>
+        <text x="58" y="93" class="d-col">NAME</text>
+
+        <rect x="240" y="20" width="210" height="160" rx="6" class="d-box"/>
+        <path d="M240 50 V26 a6 6 0 0 1 6 -6 H444 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="345" y="40" class="d-title">ENROLLMENT</text>
+        <text x="252" y="67" class="d-tag">PK</text><text x="292" y="67" class="d-col d-pk">ENROLLMENT_ID</text>
+        <line x1="240" y1="76" x2="450" y2="76" class="d-sep"/>
+        <text x="252" y="93" class="d-tag">FK</text><text x="292" y="93" class="d-col d-prop">STUDENT_ID</text>
+        <text x="252" y="119" class="d-tag">FK</text><text x="292" y="119" class="d-col d-prop">COURSE_ID</text>
+        <text x="292" y="145" class="d-col">ENROLLED_AT</text>
+        <text x="292" y="171" class="d-col">GRADE</text>
+        <text x="345" y="202" class="d-note" text-anchor="middle">UNIQUE (STUDENT_ID, COURSE_ID)</text>
+
+        <rect x="510" y="20" width="170" height="82" rx="6" class="d-box"/>
+        <path d="M510 50 V26 a6 6 0 0 1 6 -6 H674 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+        <text x="595" y="40" class="d-title">COURSE</text>
+        <text x="522" y="67" class="d-tag">PK</text><text x="558" y="67" class="d-col d-pk">COURSE_ID</text>
+        <line x1="510" y1="76" x2="680" y2="76" class="d-sep"/>
+        <text x="558" y="93" class="d-col">TITLE</text>
+      </svg>
+      <figcaption>N:M을 학생 1:N 수강 N:1 강의로 풀었다. 수강은 자체 대리 키를 가지는 비식별 관계(점선)이고, 중복 신청은 유니크 제약으로 막는다.</figcaption>
+    </figure>
+<pre><code>@Entity
+@Table(uniqueConstraints = @UniqueConstraint(
+    columnNames = {"STUDENT_ID", "COURSE_ID"}))   // 중복 신청 방지
+public class Enrollment {
+    @Id @GeneratedValue
+    @Column(name = "ENROLLMENT_ID")
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "STUDENT_ID")
+    private Student student;
+
+    @ManyToOne
+    @JoinColumn(name = "COURSE_ID")
+    private Course course;
+
+    private LocalDateTime enrolledAt;
+    private String grade;
+}</code></pre>
+
+    <h4>PK를 (STUDENT_ID, COURSE_ID) 복합 키로 하면?</h4>
+    <p>가능하지만 식별자 클래스(<code>EnrollmentId</code>)와 equals/hashCode, <code>@MapsId</code> 두 개가 필요하다. 더 큰 문제는 <strong>"재수강 허용"</strong> 같은 요구가 오면 같은 학생-강의 조합이 두 번 들어가야 해서 <strong>PK 구조 자체를 바꿔야</strong> 한다는 점이다. 대리 키라면 유니크 제약만 수정하면 된다.</p>
+
+    <div class="box">
+      <strong>정리</strong>
+      연결 테이블은 처음부터 엔티티로 만들고, PK는 대리 키, 비즈니스 규칙(중복 금지)은 유니크 제약으로 표현한다.
+    </div>
+  </article>
+
+  <article class="case" id="c7">
+    <div class="case-head">
+      <span class="case-no">Case 7</span>
+      <h3>관계가 있을 수도 없을 수도 있다</h3>
+      <span class="ref">7장 · 조인 컬럼 / 조인 테이블</span>
+    </div>
+
+    <h4>상황</h4>
+    <p>게시글은 카테고리에 속할 수도 있고, 카테고리 없이 작성될 수도 있다.</p>
+
+    <h4>선택지</h4>
+<pre><code>// ① 조인 컬럼: POST 테이블에 nullable FK
+@ManyToOne
+@JoinColumn(name = "CATEGORY_ID")          // 카테고리 없으면 null
+private Category category;
+
+// ② 조인 테이블: POST_CATEGORY 연결 테이블
+@ManyToOne
+@JoinTable(name = "POST_CATEGORY",
+    joinColumns = @JoinColumn(name = "POST_ID"),
+    inverseJoinColumns = @JoinColumn(name = "CATEGORY_ID"))
+private Category category;                  // 카테고리 없으면 행 자체가 없음</code></pre>
+
+    <div class="table-wrap">
+    <table>
+      <tr><th></th><th>① 조인 컬럼</th><th>② 조인 테이블</th></tr>
+      <tr><td>관계 없을 때</td><td>FK에 null</td><td>연결 테이블에 행 없음</td></tr>
+      <tr><td>조회</td><td>외부 조인 1번</td><td>외부 조인 2번 (테이블이 하나 더)</td></tr>
+      <tr><td>테이블 수</td><td>그대로</td><td>+1</td></tr>
+    </table>
+    </div>
+
+    <h4>추천 설계: ① 조인 컬럼 (nullable FK)</h4>
+    <p>null FK 몇 개가 테이블 하나를 더 관리하는 비용보다 훨씬 싸다. 대부분의 선택적 관계는 조인 컬럼으로 충분하다.</p>
+
+    <div class="box">
+      <strong>조인 테이블을 고려할 만한 경우</strong>
+      관계가 있는 데이터가 <strong>극히 일부</strong>여서 FK 컬럼이 거의 전부 null인 경우, 또는 기존 테이블에 <strong>FK 컬럼을 추가할 수 없는</strong> 경우(레거시 테이블 변경 불가).
+    </div>
+  </article>
+</section>
+
+</div>
+</body>
+</html>
