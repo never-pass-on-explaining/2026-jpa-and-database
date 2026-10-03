@@ -147,3 +147,6 @@ RPC처럼 메시지를 다른 프로세스에 보내지만, 직접 보내지 않
 - 프로듀서와 컨슈머가 독립 배포되므로 양방향 호환이 필요하다.
 - 브로커에 옛 메시지가 남아 있을 수 있어서, 컨슈머는 신/구 메시지를 모두 읽어야 한다.
 
+
+# 딥다이브 실습
+→ [ddia-msa-practice (ch04-done)](https://github.com/Afdddd/ddia-msa-practice)
