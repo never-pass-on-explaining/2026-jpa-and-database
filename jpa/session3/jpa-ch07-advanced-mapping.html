@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JPA 7장 고급 매핑</title>
+<style>
+  :root {
+    --bg: #fbfaf7;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #5b6470;
+    --border: #e4e1da;
+    --accent: #2f6f5e;
+    --accent-soft: #e6f0ec;
+    --warn: #9a5b12;
+    --warn-soft: #fbf1e3;
+    --code-bg: #f3f1ec;
+    --code-text: #24292f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #16181b;
+      --surface: #1d2024;
+      --text: #e6e6e3;
+      --muted: #9aa1a9;
+      --border: #2e3237;
+      --accent: #7cc4ad;
+      --accent-soft: #1f302b;
+      --warn: #e0a95c;
+      --warn-soft: #2f2619;
+      --code-bg: #111315;
+      --code-text: #dcdcd8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #16181b; --surface: #1d2024; --text: #e6e6e3; --muted: #9aa1a9;
+    --border: #2e3237; --accent: #7cc4ad; --accent-soft: #1f302b;
+    --warn: #e0a95c; --warn-soft: #2f2619; --code-bg: #111315; --code-text: #dcdcd8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    line-height: 1.7; font-size: 16px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 16px 80px; }
+  header h1 { font-size: 1.9rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  header p { color: var(--muted); margin: 0; }
+  nav.toc {
+    margin: 28px 0 40px; padding: 18px 20px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  nav.toc strong { font-size: 0.85rem; color: var(--muted); letter-spacing: 0.05em; }
+  nav.toc ol { margin: 8px 0 0; padding-left: 20px; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+  section { margin-bottom: 56px; }
+  h2 {
+    font-size: 1.45rem; margin: 0 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent); letter-spacing: -0.01em;
+  }
+  h3 { font-size: 1.12rem; margin: 30px 0 10px; }
+  h4 { font-size: 1rem; margin: 20px 0 8px; color: var(--accent); }
+  p { margin: 8px 0; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  code {
+    font-family: "JetBrains Mono", "D2Coding", ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-text); padding: 14px 16px;
+    border-radius: 8px; overflow-x: auto; border: 1px solid var(--border);
+    font-size: 0.86rem; line-height: 1.55; margin: 10px 0 14px;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; background: var(--surface); }
+  th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); font-weight: 600; }
+  .box {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 14px 0;
+  }
+  .box.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .box strong:first-child { display: block; margin-bottom: 4px; }
+  .muted { color: var(--muted); font-size: 0.9rem; }
+
+  /* 다이어그램 */
+  figure.diagram {
+    margin: 16px 0 20px; padding: 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 10px;
+  }
+  figure.diagram svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+  figure.diagram figcaption { margin-top: 10px; font-size: 0.88rem; color: var(--muted); }
+  .d-box { fill: var(--surface); stroke: var(--accent); stroke-width: 1.5; }
+  .d-head { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  .d-title { fill: var(--text); font-weight: 700; font-size: 14px; text-anchor: middle; }
+  .d-col { fill: var(--text); font-size: 13px; font-family: "JetBrains Mono", "D2Coding", ui-monospace, Menlo, Consolas, monospace; }
+  .d-pk { font-weight: 700; }
+  .d-disc { fill: var(--warn); font-weight: 600; }
+  .d-prop { fill: var(--accent); }
+  .d-tag { fill: var(--accent); font-size: 10px; font-weight: 700; }
+  .d-sep { stroke: var(--border); stroke-width: 1; }
+  .d-line { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .d-nonid { stroke-dasharray: 6 4; }
+  .d-mark { stroke: var(--muted); stroke-width: 1.8; }
+  .d-circle { fill: var(--surface); stroke: var(--muted); stroke-width: 1.5; }
+  .d-null { fill: var(--warn); }
+  .d-dash { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 3; }
+  .d-bracket { fill: none; stroke: var(--muted); stroke-width: 1.2; }
+  .d-note { fill: var(--muted); font-size: 12px; }
+
+  /* 어노테이션 설명 팝업 */
+  a.anno {
+    color: var(--accent); text-decoration: underline dotted; text-underline-offset: 3px;
+    cursor: pointer; font-weight: 600;
+  }
+  a.anno:hover, a.anno.active { text-decoration-style: solid; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin: -4px 0 14px; }
+  .anno-btn {
+    font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    color: var(--accent); background: var(--accent-soft);
+    border: 1px solid var(--accent); border-radius: 6px; padding: 5px 14px;
+  }
+  .anno-btn:hover, .anno-btn.active { background: var(--accent); color: var(--surface); }
+  .tip {
+    position: absolute; z-index: 100; max-width: min(520px, calc(100vw - 32px));
+    background: var(--surface); color: var(--text); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 14px 16px 12px; font-size: 0.9rem; line-height: 1.6;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18); display: none;
+  }
+  .tip.show { display: block; }
+  .tip h5 { margin: 0 0 6px; font-size: 0.95rem; color: var(--accent); padding-right: 20px; }
+  .tip ul { margin: 4px 0; padding-left: 18px; }
+  .tip ol { margin: 4px 0; padding-left: 20px; }
+  .tip ol li { margin: 6px 0; }
+  .tip pre { font-size: 0.8rem; margin: 8px 0; padding: 8px 10px; }
+  .tip table { font-size: 0.82rem; margin: 8px 0; }
+  .tip th, .tip td { padding: 5px 8px; }
+  .tip p { margin: 4px 0; }
+  .tip .close {
+    position: absolute; top: 8px; right: 10px; background: none; border: 0;
+    color: var(--muted); font-size: 1.1rem; cursor: pointer; line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>7장. 고급 매핑</h1>
+  <p>자바 ORM 표준 JPA 프로그래밍 — 핵심 요약</p>
+</header>
+
+<nav class="toc">
+  <strong>목차</strong>
+  <ol>
+    <li><a href="#inheritance">상속 관계 매핑</a></li>
+    <li><a href="#mapped-superclass">@MappedSuperclass</a></li>
+    <li><a href="#composite-key">복합 키와 식별 관계 매핑</a></li>
+    <li><a href="#join-table">조인 테이블</a></li>
+  </ol>
+</nav>
+
+<!-- ============================ 1 ============================ -->
+<section id="inheritance">
+  <h2>1. 상속 관계 매핑</h2>
+  <p>관계형 DB에는 상속 개념이 없다. 대신 <strong>슈퍼타입-서브타입 관계</strong> 모델링 기법이 객체의 상속과 가장 유사하며, 이를 테이블로 구현하는 방법이 3가지다.</p>
+
+  <h3>1) 조인 전략 (JOINED)</h3>
+  <p>부모·자식을 각각 테이블로 만들고, 자식 테이블이 부모의 PK를 받아 <strong>PK + FK</strong>로 사용한다.</p>
+  <figure class="diagram">
+    <svg viewBox="0 0 640 330" role="img" aria-label="조인 전략 테이블 구조: ITEM 테이블과 ALBUM, MOVIE 테이블이 PK이자 FK로 연결">
+      <!-- 연결선 (IE 표기법: ITEM 쪽 1, 자식 쪽 0 또는 1) -->
+      <path d="M160 200 V172 H290 V154" class="d-line"/>
+      <path d="M480 200 V172 H350 V154" class="d-line"/>
+
+      <!-- ITEM 쪽: 1 (가로 막대) -->
+      <line x1="283" y1="162" x2="297" y2="162" class="d-mark"/>
+      <line x1="343" y1="162" x2="357" y2="162" class="d-mark"/>
+
+      <!-- ALBUM 쪽: 0과 1 (원 + 가로 막대) -->
+      <line x1="153" y1="193" x2="167" y2="193" class="d-mark"/>
+      <circle cx="160" cy="183" r="4.5" class="d-circle"/>
+
+      <!-- MOVIE 쪽: 0과 1 (원 + 가로 막대) -->
+      <line x1="473" y1="193" x2="487" y2="193" class="d-mark"/>
+      <circle cx="480" cy="183" r="4.5" class="d-circle"/>
+
+      <!-- ITEM -->
+      <rect x="220" y="20" width="200" height="134" rx="6" class="d-box"/>
+      <path d="M220 50 V26 a6 6 0 0 1 6 -6 H414 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="320" y="40" class="d-title">ITEM</text>
+      <text x="232" y="67" class="d-tag">PK</text><text x="272" y="67" class="d-col d-pk">ITEM_ID</text>
+      <line x1="220" y1="76" x2="420" y2="76" class="d-sep"/>
+      <text x="272" y="93" class="d-col">NAME</text>
+      <text x="272" y="119" class="d-col">PRICE</text>
+      <text x="272" y="145" class="d-col d-disc">DTYPE</text>
+
+      <!-- ALBUM -->
+      <rect x="60" y="200" width="200" height="82" rx="6" class="d-box"/>
+      <path d="M60 230 V206 a6 6 0 0 1 6 -6 H254 a6 6 0 0 1 6 6 V230 z" class="d-head"/>
+      <text x="160" y="220" class="d-title">ALBUM</text>
+      <text x="72" y="247" class="d-tag">PK,FK</text><text x="122" y="247" class="d-col d-pk">ITEM_ID</text>
+      <line x1="60" y1="256" x2="260" y2="256" class="d-sep"/>
+      <text x="122" y="273" class="d-col">ARTIST</text>
+
+      <!-- MOVIE -->
+      <rect x="380" y="200" width="200" height="108" rx="6" class="d-box"/>
+      <path d="M380 230 V206 a6 6 0 0 1 6 -6 H574 a6 6 0 0 1 6 6 V230 z" class="d-head"/>
+      <text x="480" y="220" class="d-title">MOVIE</text>
+      <text x="392" y="247" class="d-tag">PK,FK</text><text x="442" y="247" class="d-col d-pk">MOVIE_ID</text>
+      <line x1="380" y1="256" x2="580" y2="256" class="d-sep"/>
+      <text x="442" y="273" class="d-col">DIRECTOR</text>
+      <text x="442" y="299" class="d-col">ACTOR</text>
+    </svg>
+    <figcaption>자식 테이블의 PK가 곧 <code>ITEM.ITEM_ID</code>를 참조하는 FK다. 관계는 ITEM <strong>1</strong> : 자식 <strong>0 또는 1</strong>이다. 아이템 하나는 자식 테이블 중 한 곳에만 행이 있고, 나머지 자식 테이블에는 행이 없다. <code>MOVIE</code>는 <code>@PrimaryKeyJoinColumn</code>으로 컬럼명을 <code>MOVIE_ID</code>로 바꾼 경우다. <code>DTYPE</code>은 어떤 자식 테이블에 데이터가 있는지 알려준다.</figcaption>
+  </figure>
+<pre><code>@Entity
+<a href="#" class="anno" data-tip="inheritance">@Inheritance(strategy = InheritanceType.JOINED)</a>
+<a href="#" class="anno" data-tip="discColumn">@DiscriminatorColumn(name = "DTYPE")</a>
+public abstract class Item {
+    @Id @GeneratedValue
+    @Column(name = "ITEM_ID")
+    private Long id;
+    private String name;
+    private int price;
+}
+
+@Entity
+<a href="#" class="anno" data-tip="discValue">@DiscriminatorValue("A")</a>
+public class Album extends Item {
+    private String artist;
+}
+
+@Entity
+@DiscriminatorValue("M")
+<a href="#" class="anno" data-tip="pkJoinColumn">@PrimaryKeyJoinColumn(name = "MOVIE_ID")</a>
+public class Movie extends Item {
+    private String director;
+    private String actor;
+}</code></pre>
+<pre><code>-- Album 저장 시: INSERT 2번
+insert into Item (name, price, DTYPE, ITEM_ID) values (?, ?, 'A', ?);
+insert into Album (artist, ITEM_ID) values (?, ?);
+
+-- Album 조회 시: 조인
+select ... from Album a inner join Item i on a.ITEM_ID = i.ITEM_ID where a.ITEM_ID = ?;</code></pre>
+  <ul>
+    <li><strong>장점</strong>: 테이블 정규화, FK 무결성 제약 활용 가능, 저장 공간 효율적</li>
+    <li><strong>단점</strong>: 조회 시 조인이 많아 성능 저하 가능, 쿼리 복잡, INSERT 2번</li>
+  </ul>
+
+  <h3>2) 단일 테이블 전략 (SINGLE_TABLE)</h3>
+  <p>테이블 하나에 부모·자식의 모든 컬럼을 넣고, 구분 컬럼(DTYPE)으로 구분한다.</p>
+  <figure class="diagram">
+    <svg viewBox="0 0 640 252" role="img" aria-label="단일 테이블 전략 테이블 구조: ITEM 테이블 하나에 부모와 자식의 모든 컬럼이 들어가고 자식 컬럼은 null 허용">
+      <!-- ITEM -->
+      <rect x="170" y="20" width="240" height="212" rx="6" class="d-box"/>
+      <path d="M170 50 V26 a6 6 0 0 1 6 -6 H404 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="290" y="40" class="d-title">ITEM</text>
+
+      <text x="182" y="67" class="d-tag">PK</text><text x="232" y="67" class="d-col d-pk">ITEM_ID</text>
+      <line x1="170" y1="76" x2="410" y2="76" class="d-sep"/>
+      <text x="232" y="93" class="d-col">NAME</text>
+      <text x="232" y="119" class="d-col">PRICE</text>
+      <text x="232" y="145" class="d-col d-disc">DTYPE</text>
+      <line x1="170" y1="154" x2="410" y2="154" class="d-dash"/>
+      <text x="182" y="171" class="d-tag d-null">NULL</text><text x="232" y="171" class="d-col">ARTIST</text>
+      <text x="182" y="197" class="d-tag d-null">NULL</text><text x="232" y="197" class="d-col">DIRECTOR</text>
+      <text x="182" y="223" class="d-tag d-null">NULL</text><text x="232" y="223" class="d-col">ACTOR</text>
+
+      <!-- 우측 그룹 표시 -->
+      <path d="M420 56 h8 V128 h-8" class="d-bracket"/>
+      <text x="436" y="96" class="d-note">Item 공통 컬럼</text>
+
+      <path d="M420 134 h8 V152 h-8" class="d-bracket"/>
+      <text x="436" y="147" class="d-note">구분 컬럼</text>
+
+      <path d="M420 158 h8 V180 h-8" class="d-bracket"/>
+      <text x="436" y="173" class="d-note">Album 전용</text>
+
+      <path d="M420 184 h8 V230 h-8" class="d-bracket"/>
+      <text x="436" y="211" class="d-note">Movie 전용</text>
+    </svg>
+    <figcaption>부모·자식 컬럼이 모두 <code>ITEM</code> 테이블 하나에 들어가며, 관계선이 없다. Album을 저장하면 <code>DIRECTOR</code>, <code>ACTOR</code>는 null이 되고, Movie를 저장하면 <code>ARTIST</code>가 null이 된다. 그래서 <strong>자식 전용 컬럼은 모두 null을 허용</strong>해야 한다. <code>DTYPE</code>으로 행이 어떤 타입인지 구분한다.</figcaption>
+  </figure>
+<pre><code>@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "DTYPE")
+public abstract class Item { ... }
+
+@Entity @DiscriminatorValue("A")
+public class Album extends Item { ... }</code></pre>
+  <ul>
+    <li><strong>장점</strong>: <a href="#" class="anno" data-tip="singlePerf">조인이 없어 조회 성능이 가장 빠름, 쿼리 단순</a></li>
+    <li><strong>단점</strong>: <strong>자식 엔티티의 컬럼은 모두 null 허용</strong>이어야 함, 테이블이 커질 수 있어 오히려 느려질 수 있음</li>
+    <li><a href="#" class="anno" data-tip="discRequired">구분 컬럼이 반드시 필요</a> — <code>@DiscriminatorColumn</code>을 생략해도 Hibernate가 <code>DTYPE</code>을 자동 생성</li>
+  </ul>
+
+  <h4>조인 전략 vs 단일 테이블 — 언제 무엇을 쓸까</h4>
+  <div class="table-wrap">
+  <table>
+    <tr><th>판단 기준</th><th>조인 전략</th><th>단일 테이블</th></tr>
+    <tr><td>자식 고유 컬럼</td><td>많고 서로 다름</td><td>1~2개로 단순</td></tr>
+    <tr><td>자식 컬럼 not null 필요</td><td>가능</td><td>불가 (자식 컬럼 null 허용 필수)</td></tr>
+    <tr><td>특정 자식만 FK로 참조<br><span class="muted">예: <code>ALBUM_REVIEW</code> → <code>ALBUM</code></span></td><td>가능</td><td>불가</td></tr>
+    <tr><td>자식 타입 확장 가능성</td><td>높음 (테이블만 추가)</td><td>낮음</td></tr>
+    <tr><td>부모 타입 목록 조회</td><td>잦지 않음 (자식 수만큼 outer join)</td><td>잦고 성능이 중요</td></tr>
+    <tr><th>한 줄 요약</th><th>정합성·확장성</th><th>단순함·조회 성능</th></tr>
+  </table>
+  </div>
+  <p class="muted">조인 전략 예: 결제수단(카드 / 계좌이체), 상품(도서 / 강의), 알림(이메일 / SMS)</p>
+
+  <h3>3) 구현 클래스마다 테이블 전략 (TABLE_PER_CLASS)</h3>
+  <p>자식 엔티티마다 테이블을 만들고, 각 테이블에 부모 컬럼까지 모두 포함한다. 구분 컬럼을 쓰지 않는다.</p>
+<pre><code>-- 부모 타입으로 조회하면 모든 자식 테이블을 UNION
+select ... from (
+    select ... from Album union all
+    select ... from Movie union all
+    select ... from Book
+) i where i.ITEM_ID = ?;</code></pre>
+  <ul>
+    <li><strong>장점</strong>: 서브타입을 명확히 구분, not null 제약 사용 가능</li>
+    <li><strong>단점</strong>: 부모 타입 조회 시 UNION으로 느림, 자식 테이블을 통합해서 쿼리하기 어려움</li>
+    <li><code>GenerationType.IDENTITY</code> 사용 불가 — 여러 테이블 간 ID가 겹치면 안 되기 때문</li>
+  </ul>
+  <div class="box warn">
+    <strong>DB 설계자·ORM 전문가 모두 추천하지 않는 전략</strong>
+  </div>
+
+  <h3>전략 비교</h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th></th><th>JOINED</th><th>SINGLE_TABLE</th><th>TABLE_PER_CLASS</th></tr>
+    <tr><td>테이블</td><td>부모 1 + 자식 N</td><td>1개</td><td>자식 N</td></tr>
+    <tr><td>구분 컬럼</td><td>선택</td><td>필수 (자동 생성)</td><td>사용 안 함</td></tr>
+    <tr><td>조회</td><td>조인</td><td>조인 없음 (가장 빠름)</td><td>부모 조회 시 UNION</td></tr>
+    <tr><td>정규화</td><td>O</td><td>X</td><td>X (부모 컬럼 중복)</td></tr>
+    <tr><td>자식 컬럼 not null</td><td>O</td><td>X</td><td>O</td></tr>
+  </table>
+  </div>
+  <div class="box">
+    <strong>선택 기준</strong>
+    기본은 <strong>JOINED</strong>. 구조가 단순하고 확장 가능성이 낮으면 <strong>SINGLE_TABLE</strong>. TABLE_PER_CLASS는 쓰지 않는다.
+  </div>
+</section>
+
+<!-- ============================ 2 ============================ -->
+<section id="mapped-superclass">
+  <h2>2. @MappedSuperclass</h2>
+  <p>부모 클래스는 테이블과 매핑하지 않고, <strong>자식 엔티티에게 매핑 정보(공통 필드)만 물려주고 싶을 때</strong> 사용한다. 상속 관계 매핑이 아니다.</p>
+<pre><code><a href="#" class="anno" data-tip="mappedSuperclass">@MappedSuperclass</a>
+public abstract class BaseEntity {
+    @Id @GeneratedValue
+    private Long id;
+    private String name;
+}
+
+@Entity
+public class Member extends BaseEntity {
+    private String email;       // MEMBER 테이블: id, name, email
+}
+
+@Entity
+<a href="#" class="anno" data-tip="attrOverride">@AttributeOverride(name = "id", column = @Column(name = "SELLER_ID"))</a>
+public class Seller extends BaseEntity {
+    private String shopName;    // SELLER 테이블: SELLER_ID, name, shopName
+}</code></pre>
+
+  <ul>
+    <li>주 용도: 등록일, 수정일, 등록자, 수정자 같은 <strong>공통 컬럼</strong> 모으기</li>
+    <li><code>@Entity</code> 클래스는 <code>@Entity</code> 또는 <code>@MappedSuperclass</code>가 붙은 클래스만 상속할 수 있다</li>
+  </ul>
+</section>
+
+<!-- ============================ 3 ============================ -->
+<section id="composite-key">
+  <h2>3. 복합 키와 식별 관계 매핑</h2>
+
+  <h3>식별 관계 vs 비식별 관계</h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th>구분</th><th>의미</th></tr>
+    <tr><td>식별 관계</td><td>부모의 PK를 받아서 자식의 <strong>PK + FK</strong>로 사용</td></tr>
+    <tr><td>비식별 관계</td><td>부모의 PK를 받아서 자식의 <strong>FK로만</strong> 사용</td></tr>
+    <tr><td>└ 필수적 비식별</td><td>FK에 null 불허 → 연관관계 필수</td></tr>
+    <tr><td>└ 선택적 비식별</td><td>FK에 null 허용 → 연관관계 선택</td></tr>
+  </table>
+  </div>
+
+  <h3>복합 키를 쓰려면 식별자 클래스가 필요하다</h3>
+  <p>JPA는 영속성 컨텍스트에 엔티티를 저장할 때 <strong>식별자를 키</strong>로 사용하고, 식별자를 구분할 때 <code>equals()</code>/<code>hashCode()</code>로 동등성 비교를 한다.
+  식별자 필드가 2개 이상이면 이를 담을 별도 클래스를 만들고 <a href="#" class="anno" data-tip="equalsHash">equals/hashCode를 반드시 구현</a>해야 한다.</p>
+
+  <h4>식별자 클래스 공통 조건</h4>
+  <ul>
+    <li><code>Serializable</code> 구현</li>
+    <li><code>equals()</code>, <code>hashCode()</code> 구현</li>
+    <li>기본 생성자 필수</li>
+    <li>클래스는 <code>public</code></li>
+  </ul>
+
+  <h3>1) @IdClass — DB에 가까운 방식</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 640 176" role="img" aria-label="PARENT 테이블의 복합 기본 키 PARENT_ID1, PARENT_ID2를 CHILD 테이블이 외래 키 두 개로 참조하는 ER 다이어그램">
+      <!-- 연결선: PARENT 1 : CHILD 0..N -->
+      <line x1="260" y1="84" x2="380" y2="84" class="d-line d-nonid"/>
+      <!-- PARENT 쪽: 1 -->
+      <line x1="274" y1="77" x2="274" y2="91" class="d-mark"/>
+      <!-- CHILD 쪽: 0..N (원 + 까마귀발) -->
+      <line x1="366" y1="84" x2="380" y2="76" class="d-mark"/>
+      <line x1="366" y1="84" x2="380" y2="92" class="d-mark"/>
+      <circle cx="356" cy="84" r="4.5" class="d-circle"/>
+
+      <!-- PARENT -->
+      <rect x="40" y="20" width="220" height="108" rx="6" class="d-box"/>
+      <path d="M40 50 V26 a6 6 0 0 1 6 -6 H254 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="150" y="40" class="d-title">PARENT</text>
+      <text x="52" y="67" class="d-tag">PK</text><text x="102" y="67" class="d-col d-pk">PARENT_ID1</text>
+      <text x="52" y="93" class="d-tag">PK</text><text x="102" y="93" class="d-col d-pk">PARENT_ID2</text>
+      <line x1="40" y1="102" x2="260" y2="102" class="d-sep"/>
+      <text x="102" y="119" class="d-col">NAME</text>
+
+      <!-- CHILD -->
+      <rect x="380" y="20" width="220" height="134" rx="6" class="d-box"/>
+      <path d="M380 50 V26 a6 6 0 0 1 6 -6 H594 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="490" y="40" class="d-title">CHILD</text>
+      <text x="392" y="67" class="d-tag">PK</text><text x="442" y="67" class="d-col d-pk">CHILD_ID</text>
+      <line x1="380" y1="76" x2="600" y2="76" class="d-sep"/>
+      <text x="392" y="93" class="d-tag">FK</text><text x="442" y="93" class="d-col">PARENT_ID1</text>
+      <text x="392" y="119" class="d-tag">FK</text><text x="442" y="119" class="d-col">PARENT_ID2</text>
+      <text x="442" y="145" class="d-col">NAME</text>
+    </svg>
+    <figcaption><code>PARENT</code>의 PK는 <code>PARENT_ID1</code> + <code>PARENT_ID2</code> <strong>두 컬럼을 묶은 복합 키</strong>다. <code>CHILD</code>는 이 복합 키를 참조하기 위해 <strong>FK 컬럼도 두 개</strong> 가진다. 관계는 PARENT <strong>1</strong> : CHILD <strong>0..N</strong>이고, FK가 CHILD의 PK에 포함되지 않으므로 <strong>비식별 관계(점선)</strong>다.</figcaption>
+  </figure>
+<pre><code>@Entity
+@IdClass(ParentId.class)
+public class Parent {
+    @Id @Column(name = "PARENT_ID1")
+    private String id1;
+    @Id @Column(name = "PARENT_ID2")
+    private String id2;
+    private String name;
+}
+
+public class ParentId implements Serializable {
+    private String id1;   // Parent.id1과 필드명 일치
+    private String id2;   // Parent.id2와 필드명 일치
+
+    public ParentId() {}
+    public ParentId(String id1, String id2) { ... }
+    @Override public boolean equals(Object o) { ... }
+    @Override public int hashCode() { ... }
+}</code></pre>
+  <div class="btn-row">
+    <button type="button" class="anno-btn" data-tip="idClassSave">저장 방법</button>
+    <button type="button" class="anno-btn" data-tip="idClassFind">조회 방법</button>
+  </div>
+  <ul>
+    <li>식별자 클래스의 속성명 = 엔티티의 식별자 속성명</li>
+  </ul>
+
+  <h3>2) @EmbeddedId — 객체지향적인 방식</h3>
+<pre><code>@Entity
+public class Parent {
+    @EmbeddedId
+    private ParentId id;
+    private String name;
+}
+
+@Embeddable
+public class ParentId implements Serializable {
+    @Column(name = "PARENT_ID1")
+    private String id1;
+    @Column(name = "PARENT_ID2")
+    private String id2;
+    // 기본 생성자, equals, hashCode
+}</code></pre>
+  <div class="btn-row">
+    <button type="button" class="anno-btn" data-tip="embSave">저장 방법</button>
+    <button type="button" class="anno-btn" data-tip="embFind">조회 방법</button>
+  </div>
+
+  <h4>@IdClass vs @EmbeddedId</h4>
+  <div class="table-wrap">
+  <table>
+    <tr><th></th><th>@IdClass</th><th>@EmbeddedId</th></tr>
+    <tr><td>성격</td><td>DB 친화적</td><td>객체지향적</td></tr>
+    <tr><td>식별자 클래스 어노테이션</td><td>없음</td><td><code>@Embeddable</code></td></tr>
+    <tr><td>JPQL</td><td><code>select p.id1, p.id2 from Parent p</code></td><td><code>select p.id.id1, p.id.id2 from Parent p</code></td></tr>
+  </table>
+  </div>
+
+  <h3>3) 식별 관계 매핑</h3>
+  <p>부모 → 자식 → 손자로 PK가 계속 전파되는 구조.</p>
+  <figure class="diagram">
+    <svg viewBox="0 0 690 170" role="img" aria-label="식별 관계 ER 다이어그램: PARENT의 PK가 CHILD의 PK로, CHILD의 PK가 GRANDCHILD의 PK로 전파">
+      <!-- PARENT - CHILD (식별: 실선) -->
+      <line x1="190" y1="63" x2="240" y2="63" class="d-line"/>
+      <line x1="200" y1="56" x2="200" y2="70" class="d-mark"/>
+      <circle cx="216" cy="63" r="4.5" class="d-circle"/>
+      <line x1="226" y1="63" x2="240" y2="55" class="d-mark"/>
+      <line x1="226" y1="63" x2="240" y2="71" class="d-mark"/>
+
+      <!-- CHILD - GRANDCHILD (식별: 실선) -->
+      <line x1="430" y1="63" x2="480" y2="63" class="d-line"/>
+      <line x1="440" y1="56" x2="440" y2="70" class="d-mark"/>
+      <circle cx="456" cy="63" r="4.5" class="d-circle"/>
+      <line x1="466" y1="63" x2="480" y2="55" class="d-mark"/>
+      <line x1="466" y1="63" x2="480" y2="71" class="d-mark"/>
+
+      <!-- PARENT -->
+      <rect x="10" y="20" width="180" height="82" rx="6" class="d-box"/>
+      <path d="M10 50 V26 a6 6 0 0 1 6 -6 H184 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="100" y="40" class="d-title">PARENT</text>
+      <text x="22" y="67" class="d-tag">PK</text><text x="68" y="67" class="d-col d-pk">PARENT_ID</text>
+      <line x1="10" y1="76" x2="190" y2="76" class="d-sep"/>
+      <text x="68" y="93" class="d-col">NAME</text>
+
+      <!-- CHILD -->
+      <rect x="240" y="20" width="190" height="108" rx="6" class="d-box"/>
+      <path d="M240 50 V26 a6 6 0 0 1 6 -6 H424 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="335" y="40" class="d-title">CHILD</text>
+      <text x="252" y="67" class="d-tag">PK,FK</text><text x="298" y="67" class="d-col d-pk d-prop">PARENT_ID</text>
+      <text x="252" y="93" class="d-tag">PK</text><text x="298" y="93" class="d-col d-pk">CHILD_ID</text>
+      <line x1="240" y1="102" x2="430" y2="102" class="d-sep"/>
+      <text x="298" y="119" class="d-col">NAME</text>
+
+      <!-- GRANDCHILD -->
+      <rect x="480" y="20" width="200" height="134" rx="6" class="d-box"/>
+      <path d="M480 50 V26 a6 6 0 0 1 6 -6 H674 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="580" y="40" class="d-title">GRANDCHILD</text>
+      <text x="492" y="67" class="d-tag">PK,FK</text><text x="538" y="67" class="d-col d-pk d-prop">PARENT_ID</text>
+      <text x="492" y="93" class="d-tag">PK,FK</text><text x="538" y="93" class="d-col d-pk d-prop">CHILD_ID</text>
+      <text x="492" y="119" class="d-tag">PK</text><text x="538" y="119" class="d-col d-pk">GRANDCHILD_ID</text>
+      <line x1="480" y1="128" x2="680" y2="128" class="d-sep"/>
+      <text x="538" y="145" class="d-col">NAME</text>
+    </svg>
+    <figcaption>부모의 PK가 자식의 <strong>PK + FK</strong>가 되는 <strong>식별 관계(실선)</strong>다. 색으로 표시한 컬럼이 위에서 물려받은 PK다. <code>CHILD</code>의 PK는 <code>PARENT_ID + CHILD_ID</code>, <code>GRANDCHILD</code>의 PK는 <code>PARENT_ID + CHILD_ID + GRANDCHILD_ID</code>로 <strong>내려갈수록 PK 컬럼이 늘어난다</strong>. 관계는 각각 1 : 0..N이다.</figcaption>
+  </figure>
+  <h4>@IdClass — @Id와 @ManyToOne을 같이 사용</h4>
+<pre><code>@Entity
+@IdClass(ChildId.class)
+public class Child {
+    @Id @ManyToOne
+    @JoinColumn(name = "PARENT_ID")
+    private Parent parent;
+
+    @Id @Column(name = "CHILD_ID")
+    private String childId;
+}</code></pre>
+
+  <h4>@EmbeddedId — @MapsId로 FK와 PK 속성을 연결</h4>
+<pre><code>@Entity
+public class Child {
+    @EmbeddedId
+    private ChildId id;
+
+    @MapsId("parentId")   // ChildId.parentId 필드에 매핑
+    @ManyToOne
+    @JoinColumn(name = "PARENT_ID")
+    private Parent parent;
+}
+
+@Embeddable
+public class ChildId implements Serializable {
+    private String parentId;  // @MapsId("parentId")로 매핑
+    @Column(name = "CHILD_ID")
+    private String id;
+}</code></pre>
+  <ul>
+    <li><code>@MapsId</code>: FK와 매핑한 연관관계를 기본 키에도 매핑하겠다는 뜻. 1:1 식별 관계에서도 사용 (속성값 생략)</li>
+  </ul>
+
+  <h3>식별 vs 비식별 — 무엇을 선택할까</h3>
+  <ul>
+    <li>식별 관계는 자식으로 갈수록 <strong>PK 컬럼이 계속 늘어나</strong> 조인·SQL이 복잡해지고 인덱스가 커진다</li>
+    <li>식별 관계는 비즈니스 의미가 있는 자연 키를 조합하는 경우가 많아, <strong>비즈니스 요구사항 변경에 취약</strong>하다</li>
+    <li>JPA에서 복합 키는 식별자 클래스를 별도로 만들어야 해 번거롭다</li>
+  </ul>
+  <div class="box">
+    <strong>권장</strong>
+    <strong>비식별 관계</strong> + <code>Long</code> 타입 <strong>대리 키</strong>(<code>@GeneratedValue</code>). 필수적 비식별 관계(not null)를 쓰면 내부 조인만 사용할 수 있어 성능상 유리하다.
+  </div>
+</section>
+
+<!-- ============================ 4 ============================ -->
+<section id="join-table">
+  <h2>4. 조인 테이블</h2>
+  <p>테이블 연관관계를 설계하는 방법은 두 가지다.</p>
+  <ul>
+    <li><strong>조인 컬럼</strong>: 외래 키 컬럼으로 관리 (<code>@JoinColumn</code>). 선택적 비식별 관계면 FK에 null이 생기고 외부 조인을 써야 한다.</li>
+    <li><strong>조인 테이블</strong>: 별도 테이블(연결 테이블)로 관리 (<code>@JoinTable</code>). null 문제는 없지만 테이블이 하나 늘고 조인도 한 번 더 한다.</li>
+  </ul>
+
+  <h3>@JoinTable 속성</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 690 118" role="img" aria-label="일대다 조인 테이블 ER 다이어그램: PARENT와 CHILD 사이에 연결 테이블 PARENT_CHILD">
+      <!-- PARENT 1 : PARENT_CHILD 0..N (비식별: 점선) -->
+      <line x1="190" y1="63" x2="250" y2="63" class="d-line d-nonid"/>
+      <line x1="202" y1="56" x2="202" y2="70" class="d-mark"/>
+      <circle cx="226" cy="63" r="4.5" class="d-circle"/>
+      <line x1="236" y1="63" x2="250" y2="55" class="d-mark"/>
+      <line x1="236" y1="63" x2="250" y2="71" class="d-mark"/>
+
+      <!-- PARENT_CHILD 0..1 : CHILD 1 (식별: 실선) -->
+      <line x1="440" y1="63" x2="500" y2="63" class="d-line"/>
+      <line x1="450" y1="56" x2="450" y2="70" class="d-mark"/>
+      <circle cx="462" cy="63" r="4.5" class="d-circle"/>
+      <line x1="488" y1="56" x2="488" y2="70" class="d-mark"/>
+
+      <!-- PARENT -->
+      <rect x="10" y="20" width="180" height="82" rx="6" class="d-box"/>
+      <path d="M10 50 V26 a6 6 0 0 1 6 -6 H184 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="100" y="40" class="d-title">PARENT</text>
+      <text x="22" y="67" class="d-tag">PK</text><text x="68" y="67" class="d-col d-pk">PARENT_ID</text>
+      <line x1="10" y1="76" x2="190" y2="76" class="d-sep"/>
+      <text x="68" y="93" class="d-col">NAME</text>
+
+      <!-- PARENT_CHILD (연결 테이블) -->
+      <rect x="250" y="20" width="190" height="82" rx="6" class="d-box"/>
+      <path d="M250 50 V26 a6 6 0 0 1 6 -6 H434 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="345" y="40" class="d-title">PARENT_CHILD</text>
+      <text x="262" y="67" class="d-tag">PK,FK</text><text x="308" y="67" class="d-col d-pk d-prop">CHILD_ID</text>
+      <line x1="250" y1="76" x2="440" y2="76" class="d-sep"/>
+      <text x="262" y="93" class="d-tag">FK</text><text x="308" y="93" class="d-col d-prop">PARENT_ID</text>
+
+      <!-- CHILD -->
+      <rect x="500" y="20" width="180" height="82" rx="6" class="d-box"/>
+      <path d="M500 50 V26 a6 6 0 0 1 6 -6 H674 a6 6 0 0 1 6 6 V50 z" class="d-head"/>
+      <text x="590" y="40" class="d-title">CHILD</text>
+      <text x="512" y="67" class="d-tag">PK</text><text x="558" y="67" class="d-col d-pk">CHILD_ID</text>
+      <line x1="500" y1="76" x2="680" y2="76" class="d-sep"/>
+      <text x="558" y="93" class="d-col">NAME</text>
+    </svg>
+    <figcaption><code>CHILD</code> 테이블에는 FK가 없고, 연관관계는 연결 테이블 <code>PARENT_CHILD</code>가 관리한다. 1:N이므로 자식 하나는 부모 하나에만 연결될 수 있어 <code>CHILD_ID</code>가 연결 테이블의 <strong>PK(유니크)</strong>가 된다. <code>PARENT</code> ↔ <code>PARENT_CHILD</code>는 FK가 PK에 포함되지 않아 <strong>비식별(점선), 1 : 0..N</strong>이고, <code>CHILD</code> ↔ <code>PARENT_CHILD</code>는 FK가 곧 PK라 <strong>식별(실선), 1 : 0..1</strong>이다.</figcaption>
+  </figure>
+<pre><code>@Entity
+public class Parent {
+    @Id @GeneratedValue
+    @Column(name = "PARENT_ID")
+    private Long id;
+
+    <a href="#" class="anno" data-tip="jtOneToMany">@OneToMany</a>
+    <a href="#" class="anno" data-tip="jtJoinTable">@JoinTable</a>(
+        <a href="#" class="anno" data-tip="jtName">name = "PARENT_CHILD"</a>,
+        <a href="#" class="anno" data-tip="jtJoinColumns">joinColumns = @JoinColumn(name = "PARENT_ID")</a>,
+        <a href="#" class="anno" data-tip="jtInverse">inverseJoinColumns = @JoinColumn(name = "CHILD_ID")</a>
+    )
+    private List&lt;Child&gt; children = <a href="#" class="anno" data-tip="jtInit">new ArrayList&lt;&gt;()</a>;
+}</code></pre>
+
+  <h3>관계별 조인 테이블 특징</h3>
+  <div class="table-wrap">
+  <table>
+    <tr><th>관계</th><th>연결 테이블의 유니크 제약</th></tr>
+    <tr><td><a href="#" class="anno" data-tip="jt11">1:1</a></td><td>양쪽 FK 컬럼 각각에 유니크 제약</td></tr>
+    <tr><td><a href="#" class="anno" data-tip="jt1n">1:N</a></td><td>N 쪽 FK 컬럼(<code>CHILD_ID</code>)에 유니크 제약</td></tr>
+    <tr><td><a href="#" class="anno" data-tip="jtn1">N:1</a></td><td>1:N의 방향만 반대, 동일한 구조</td></tr>
+    <tr><td><a href="#" class="anno" data-tip="jtnm">N:M</a></td><td>두 FK 컬럼을 합친 복합 유니크 제약</td></tr>
+  </table>
+  </div>
+
+  <div class="box warn">
+    <strong>연결 테이블에 컬럼을 추가하면 @JoinTable을 쓸 수 없다</strong>
+    수량, 등록일 같은 컬럼이 필요하면 연결 테이블을 <a href="#" class="anno" data-tip="promoteEntity">별도 엔티티로 승격해서 @ManyToOne 두 개로 풀어야</a> 한다.
+  </div>
+  <div class="box">
+    <strong>권장</strong>
+    기본은 <strong>조인 컬럼</strong>을 사용하고, 필요할 때만 조인 테이블을 사용한다.
+  </div>
+</section>
+
+<p class="muted">※ Spring Boot 3 이상은 <code>javax.persistence</code> 대신 <code>jakarta.persistence</code> 패키지를 사용한다.</p>
+
+</div>
+
+<div class="tip" id="tip" role="dialog">
+  <button class="close" aria-label="닫기">&times;</button>
+  <div class="tip-body"></div>
+</div>
+
+<script>
+const TIPS = {
+  inheritance: `
+    <h5>@Inheritance</h5>
+    <p><strong>부모 클래스</strong>에 선언해서 상속 매핑 전략을 지정한다.</p>
+    <ul>
+      <li><code>JOINED</code> : 조인 전략</li>
+      <li><code>SINGLE_TABLE</code> : 단일 테이블 전략</li>
+      <li><code>TABLE_PER_CLASS</code> : 구현 클래스마다 테이블 전략</li>
+    </ul>
+    <p>기본값은 <code>SINGLE_TABLE</code>이다. 생략하면 단일 테이블 전략이 적용된다.</p>`,
+  discColumn: `
+    <h5>@DiscriminatorColumn</h5>
+    <p><strong>부모 클래스</strong>에 선언한다. 저장된 자식 테이블을 구분하는 컬럼을 지정한다.</p>
+    <ul>
+      <li><code>name</code> 기본값: <code>DTYPE</code></li>
+      <li><code>discriminatorType</code> 기본값: <code>STRING</code></li>
+    </ul>
+    <p>JOINED 전략에서는 선택 사항이다. 생략하면 구분 컬럼이 만들어지지 않는다. 하지만 DB만 보고 어떤 자식 타입인지 알 수 있으므로 넣는 것을 권장한다.</p>`,
+  discValue: `
+    <h5>@DiscriminatorValue</h5>
+    <p><strong>자식 클래스</strong>에 선언한다. 엔티티를 저장할 때 구분 컬럼(DTYPE)에 들어갈 값을 지정한다.</p>
+    <p>예: Album 저장 시 <code>Item.DTYPE = 'A'</code></p>
+    <p>생략하면 <strong>엔티티 이름</strong>(<code>Album</code>)이 저장된다.</p>`,
+  pkJoinColumn: `
+    <h5>@PrimaryKeyJoinColumn</h5>
+    <p><strong>자식 테이블의 PK 컬럼명</strong>을 재정의한다.</p>
+    <p>기본적으로 자식 테이블은 부모 테이블의 PK 컬럼명(<code>ITEM_ID</code>)을 그대로 사용한다. 이 예제에서는 <code>MOVIE</code> 테이블의 PK 컬럼명이 <code>MOVIE_ID</code>가 된다.</p>
+    <p>이 컬럼은 <strong>PK이면서 동시에 부모(ITEM)를 참조하는 FK</strong>다.</p>`,
+  discRequired: `
+    <h5>구분 컬럼이 필수인 이유</h5>
+    <p>한 테이블에 Album, Movie 데이터가 섞여 있으므로, <strong>각 행이 어떤 자식 타입인지 알려줄 표식</strong>이 필요하다.</p>
+    <ol>
+      <li><strong>조회한 행을 어떤 객체로 만들지 결정</strong><br>
+        <code>em.find(Item.class, 1L)</code>처럼 부모 타입으로 조회하면 JPA는 <code>Album</code>과 <code>Movie</code> 중 무엇을 생성할지 DTYPE 값으로 판단한다.
+        null 여부로 추측할 수는 없다. 값을 비워서 저장한 Album도 있고, 자식 전용 컬럼이 아예 없는 자식 클래스도 있을 수 있기 때문이다.</li>
+      <li><strong>자식 타입만 골라서 조회</strong><br>
+        DTYPE 조건이 없으면 다른 자식 타입의 행까지 함께 조회된다.</li>
+    </ol>
+<pre><code>em.createQuery("select a from Album a", Album.class);
+
+-- 실행 SQL
+select ... from ITEM where DTYPE = 'A';</code></pre>
+    <p>조인 전략은 어느 자식 테이블에 행이 있는지로 타입을 알 수 있어 구분 컬럼이 선택이지만, 단일 테이블은 타입을 구분할 방법이 DTYPE뿐이라 필수다.</p>`,
+  mappedSuperclass: `
+    <h5>@MappedSuperclass</h5>
+    <p>부모 클래스에 선언한다. <strong>테이블과 매핑하지 않고</strong>, 자식 엔티티에게 필드의 매핑 정보만 물려준다.</p>
+    <ul>
+      <li><strong>엔티티가 아니다</strong> → <code>BASE_ENTITY</code> 테이블이 생성되지 않는다</li>
+      <li><code>em.find(BaseEntity.class, id)</code>나 JPQL <code>select b from BaseEntity b</code>로 조회할 수 없다</li>
+      <li>직접 생성해서 쓸 일이 없으므로 <code>abstract</code> 클래스로 만드는 것을 권장한다</li>
+    </ul>
+    <p>이 예제에서 <code>id</code>, <code>name</code> 필드는 <code>MEMBER</code>, <code>SELLER</code> 테이블에 각각 컬럼으로 복사된다.</p>
+    <p><code>@Inheritance</code>와의 차이: 상속 매핑은 부모도 테이블이고 부모 타입으로 다형성 조회가 되지만, <code>@MappedSuperclass</code>는 필드만 물려줄 뿐이다.</p>`,
+  attrOverride: `
+    <h5>@AttributeOverride</h5>
+    <p>부모(<code>@MappedSuperclass</code>)에게 물려받은 필드의 <strong>컬럼 매핑을 자식에서 재정의</strong>한다.</p>
+    <ul>
+      <li><code>name</code> : 재정의할 부모의 <strong>필드명</strong></li>
+      <li><code>column</code> : 새로 적용할 컬럼 정보</li>
+    </ul>
+    <p>이 예제에서 부모의 <code>id</code> 필드는 기본적으로 <code>ID</code> 컬럼으로 매핑된다. <code>Seller</code>에서만 <code>SELLER_ID</code> 컬럼으로 바꾼 것이다. <code>Member</code>는 그대로 <code>ID</code>를 쓴다.</p>
+    <p>여러 필드를 재정의하려면 <code>@AttributeOverrides</code>로 묶는다.</p>
+<pre><code>@AttributeOverrides({
+    @AttributeOverride(name = "id",   column = @Column(name = "SELLER_ID")),
+    @AttributeOverride(name = "name", column = @Column(name = "SELLER_NAME"))
+})</code></pre>
+    <p>필드가 아닌 <strong>연관관계</strong>(FK 컬럼)를 재정의할 때는 <code>@AssociationOverride</code>를 쓴다.</p>`,
+  equalsHash: `
+    <h5>equals/hashCode를 구현하지 않으면?</h5>
+    <p>기본 <code>Object.equals()</code>는 참조(인스턴스) 비교이므로, 값이 같은 식별자 객체를 새로 만들어 조회하면 다른 키로 인식된다 → 영속성 컨텍스트가 엔티티를 제대로 관리하지 못한다.</p>`,
+  idClassSave: `
+    <h5>@IdClass 저장 과정</h5>
+<pre><code>Parent parent = new Parent();
+parent.setId1("myId1");      // 식별자 값을 엔티티에 직접 세팅
+parent.setId2("myId2");
+parent.setName("parentName");
+em.persist(parent);          // ParentId는 개발자가 만들지 않음</code></pre>
+    <ol>
+      <li><strong>개발자는 <code>ParentId</code>를 만들지 않는다</strong><br>
+        <code>@IdClass</code> 방식은 엔티티(<code>Parent</code>)에 <code>@Id</code> 필드가 직접 있으므로, 엔티티에 값만 넣으면 된다.</li>
+      <li><strong><code>em.persist()</code> 시점에 JPA가 <code>ParentId</code>를 생성</strong><br>
+        영속성 컨텍스트(1차 캐시)에 저장하려면 식별자가 <strong>하나의 키</strong>여야 한다. 그래서 JPA가 엔티티의 <code>id1</code>, <code>id2</code> 값을 꺼내 <code>new ParentId("myId1", "myId2")</code>를 내부에서 만들고, 이를 키로 엔티티를 저장한다.</li>
+      <li><strong>필드명이 같아야 하는 이유</strong><br>
+        JPA는 <strong>이름</strong>으로 엔티티 필드와 <code>ParentId</code> 필드를 연결한다. <code>Parent.id1</code> → <code>ParentId.id1</code>. 이름이 다르면 값을 옮기지 못해 예외가 난다.</li>
+    </ol>
+<pre><code>-- flush 시 실행 SQL
+insert into PARENT (PARENT_ID1, PARENT_ID2, NAME)
+values ('myId1', 'myId2', 'parentName');</code></pre>
+    <p>복합 키는 <code>@GeneratedValue</code>로 자동 생성할 수 없으므로 <strong>값을 직접 할당</strong>해야 한다.</p>`,
+  idClassFind: `
+    <h5>@IdClass 조회 과정</h5>
+<pre><code>ParentId parentId = new ParentId("myId1", "myId2");
+Parent parent = em.find(Parent.class, parentId);</code></pre>
+    <ol>
+      <li><strong>조회할 때는 <code>ParentId</code>를 직접 만들어야 한다</strong><br>
+        <code>em.find(Class, Object primaryKey)</code>는 식별자를 <strong>파라미터 하나</strong>로만 받는다. 값이 두 개인 복합 키는 <code>ParentId</code> 하나로 감싸서 넘겨야 한다.</li>
+      <li><strong>1차 캐시에서 먼저 찾는다</strong><br>
+        저장 때 만든 <code>ParentId</code>와 지금 새로 만든 <code>ParentId</code>는 <strong>다른 객체</strong>다. 둘을 같은 키로 인식하려면 <code>equals()</code>/<code>hashCode()</code>가 값 비교로 구현돼 있어야 한다. 이것이 식별자 클래스에 equals/hashCode가 필수인 이유다.</li>
+      <li><strong>캐시에 없으면 DB 조회</strong></li>
+    </ol>
+<pre><code>select p.PARENT_ID1, p.PARENT_ID2, p.NAME
+from PARENT p
+where p.PARENT_ID1 = 'myId1' and p.PARENT_ID2 = 'myId2';</code></pre>
+    <p>참고: JPQL로 조회하면 <code>ParentId</code> 없이 필드로 바로 조건을 걸 수 있다.</p>
+<pre><code>select p from Parent p where p.id1 = :id1 and p.id2 = :id2</code></pre>`,
+  embSave: `
+    <h5>@EmbeddedId 저장 과정</h5>
+<pre><code>Parent parent = new Parent();
+ParentId parentId = new ParentId("myId1", "myId2"); // 식별자 클래스를 직접 생성
+parent.setId(parentId);
+parent.setName("parentName");
+em.persist(parent);</code></pre>
+    <ol>
+      <li><strong>개발자가 <code>ParentId</code>를 직접 만든다</strong><br>
+        엔티티에 <code>@Id</code> 필드가 따로 없고, 식별자 클래스 자체가 <code>id</code> 필드로 들어가 있기 때문이다.</li>
+      <li><strong>JPA는 그 객체를 그대로 키로 사용</strong><br>
+        <code>@IdClass</code>처럼 내부에서 <code>ParentId</code>를 새로 만들 필요가 없다. 엔티티가 가진 <code>ParentId</code>를 그대로 1차 캐시의 키로 쓴다.</li>
+      <li><strong>컬럼 매핑은 <code>@Embeddable</code> 클래스에서</strong><br>
+        <code>@Column(name = "PARENT_ID1")</code> 같은 매핑 정보가 <code>ParentId</code> 안에 있다. 엔티티와 필드명을 맞출 필요가 없다.</li>
+    </ol>
+<pre><code>-- flush 시 실행 SQL (@IdClass와 동일)
+insert into PARENT (PARENT_ID1, PARENT_ID2, NAME)
+values ('myId1', 'myId2', 'parentName');</code></pre>
+    <table>
+      <tr><th></th><th>@IdClass</th><th>@EmbeddedId</th></tr>
+      <tr><td>저장 시 식별자 세팅</td><td><code>setId1()</code>, <code>setId2()</code></td><td><code>setId(new ParentId(...))</code></td></tr>
+      <tr><td>ParentId 생성 주체</td><td>JPA (내부)</td><td>개발자</td></tr>
+    </table>`,
+  embFind: `
+    <h5>@EmbeddedId 조회 과정</h5>
+<pre><code>ParentId parentId = new ParentId("myId1", "myId2");
+Parent parent = em.find(Parent.class, parentId);
+
+// 식별자 값 꺼내기
+String id1 = parent.getId().getId1();</code></pre>
+    <ol>
+      <li><strong><code>em.find()</code>는 <code>@IdClass</code>와 같다</strong><br>
+        식별자를 파라미터 하나로만 받으므로 <code>ParentId</code>로 감싸서 넘긴다.</li>
+      <li><strong>1차 캐시 조회에 equals/hashCode 필요</strong><br>
+        새로 만든 <code>ParentId</code>와 저장된 <code>ParentId</code>를 같은 키로 인식하려면 값 비교가 구현돼 있어야 한다.</li>
+      <li><strong>식별자 값은 <code>getId()</code>를 거쳐서 꺼낸다</strong><br>
+        엔티티에 <code>id1</code> 필드가 직접 없으므로 <code>parent.getId().getId1()</code>처럼 한 단계 더 들어간다.</li>
+    </ol>
+<pre><code>select p.PARENT_ID1, p.PARENT_ID2, p.NAME
+from PARENT p
+where p.PARENT_ID1 = 'myId1' and p.PARENT_ID2 = 'myId2';</code></pre>
+    <p>JPQL도 <code>id</code>를 거쳐야 한다.</p>
+<pre><code>select p from Parent p where p.id.id1 = :id1 and p.id.id2 = :id2</code></pre>`,
+  jtOneToMany: `
+    <h5>@OneToMany + @JoinTable</h5>
+    <p>부모 1 : 자식 N 관계를 <strong>FK 컬럼 대신 연결 테이블</strong>로 관리한다. 자식 테이블(<code>CHILD</code>)에는 <code>PARENT_ID</code> 컬럼이 생기지 않는다.</p>
+    <p><strong>주의</strong>: 단방향 <code>@OneToMany</code>에 <code>@JoinColumn</code>도 <code>mappedBy</code>도 없으면, Hibernate는 <strong>기본으로 조인 테이블 전략</strong>을 쓴다. 의도치 않게 연결 테이블이 생기는 흔한 실수다.</p>
+<pre><code>@OneToMany                       // 연결 테이블 자동 생성
+private List&lt;Child&gt; children;
+
+@OneToMany
+@JoinColumn(name = "PARENT_ID")  // CHILD 테이블의 FK로 관리
+private List&lt;Child&gt; children;</code></pre>`,
+  jtJoinTable: `
+    <h5>@JoinTable</h5>
+    <p>엔티티와 <strong>연결 테이블</strong>의 매핑 정보를 지정한다. 연관관계의 주인 쪽에 선언한다.</p>
+    <p>생략하면 기본 규칙으로 테이블명·컬럼명이 정해지는데, 규칙이 직관적이지 않아 <strong>명시하는 것을 권장</strong>한다.</p>
+    <p>이 매핑으로 만들어지는 테이블:</p>
+<pre><code>create table PARENT_CHILD (
+    PARENT_ID bigint not null,
+    CHILD_ID  bigint not null,
+    unique (CHILD_ID)          -- 1:N이므로 자식은 부모 하나에만 연결
+);</code></pre>`,
+  jtName: `
+    <h5>name</h5>
+    <p><strong>연결 테이블의 이름</strong>을 지정한다.</p>
+    <p>관례상 <code>부모_자식</code> 형태(<code>PARENT_CHILD</code>, <code>MEMBER_PRODUCT</code>)로 짓는다.</p>`,
+  jtJoinColumns: `
+    <h5>joinColumns</h5>
+    <p>연결 테이블에서 <strong>현재 엔티티(Parent)를 참조하는 FK 컬럼</strong>을 지정한다.</p>
+    <p><code>PARENT_CHILD.PARENT_ID</code> → <code>PARENT.PARENT_ID</code></p>
+    <p>"현재 엔티티"는 <code>@JoinTable</code>을 선언한 클래스다.</p>`,
+  jtInverse: `
+    <h5>inverseJoinColumns</h5>
+    <p>연결 테이블에서 <strong>반대편 엔티티(Child)를 참조하는 FK 컬럼</strong>을 지정한다.</p>
+    <p><code>PARENT_CHILD.CHILD_ID</code> → <code>CHILD.CHILD_ID</code></p>
+    <p><code>joinColumns</code>와 헷갈리기 쉽다. <strong>join = 나, inverse = 상대방</strong>으로 기억하면 된다.</p>
+    <p>1:N에서는 이 컬럼에 <strong>유니크 제약</strong>이 걸린다. N:M이면 유니크 제약 없이 두 컬럼 조합으로 PK를 잡는다.</p>`,
+  jtInit: `
+    <h5>컬렉션은 필드에서 바로 초기화</h5>
+    <p><code>null</code> 대신 빈 컬렉션으로 초기화해 두면 <code>parent.getChildren().add(child)</code>에서 <strong>NullPointerException이 나지 않는다</strong>.</p>
+    <p>엔티티를 영속화하면 Hibernate가 이 컬렉션을 <strong>자체 래퍼 컬렉션</strong>(<code>PersistentBag</code> 등)으로 교체해서 변경을 추적한다. 따라서 이후에 <code>setChildren(new ArrayList&lt;&gt;())</code>처럼 <strong>컬렉션 자체를 바꾸지 말아야</strong> 한다.</p>
+    <p>자식을 추가하면 flush 시 연결 테이블에 INSERT가 나간다.</p>
+<pre><code>parent.getChildren().add(child);
+-- insert into PARENT_CHILD (PARENT_ID, CHILD_ID) values (?, ?)</code></pre>`,
+  jt11: `
+    <h5>1:1 조인 테이블</h5>
+    <p>부모 하나는 자식 <strong>하나</strong>, 자식 하나도 부모 <strong>하나</strong>에만 연결된다.</p>
+    <p>그러려면 연결 테이블에서 <code>PARENT_ID</code>도 <strong>한 번만</strong>, <code>CHILD_ID</code>도 <strong>한 번만</strong> 나와야 한다. 그래서 <strong>두 컬럼 각각에 유니크 제약</strong>을 건다.</p>
+    <table>
+      <tr><th>PARENT_ID</th><th>CHILD_ID</th><th></th></tr>
+      <tr><td>100</td><td>1</td><td>OK</td></tr>
+      <tr><td>100</td><td>2</td><td>불가: 부모 100이 자식 둘 → 1:N이 돼버림</td></tr>
+      <tr><td>200</td><td>1</td><td>불가: 자식 1이 부모 둘</td></tr>
+    </table>
+<pre><code>@OneToOne
+@JoinTable(name = "PARENT_CHILD",
+    joinColumns = @JoinColumn(name = "PARENT_ID"),
+    inverseJoinColumns = @JoinColumn(name = "CHILD_ID"))
+private Child child;</code></pre>
+    <p>책에서는 <code>PARENT_ID</code>를 PK로, <code>CHILD_ID</code>에 유니크 제약을 건다. PK도 유니크이므로 결과는 같다.</p>`,
+  jt1n: `
+    <h5>1:N 조인 테이블</h5>
+    <p>부모 하나는 자식 <strong>여러 명</strong>, 자식 하나는 부모 <strong>하나</strong>에만 연결된다.</p>
+    <ul>
+      <li><code>PARENT_ID</code>: 여러 번 나와도 됨 (자식이 여럿이니까)</li>
+      <li><code>CHILD_ID</code>: <strong>한 번만</strong> 나와야 함 (부모가 하나뿐이니까) → <strong>유니크 제약</strong></li>
+    </ul>
+    <table>
+      <tr><th>PARENT_ID</th><th>CHILD_ID</th><th></th></tr>
+      <tr><td>100</td><td>1</td><td>OK</td></tr>
+      <tr><td>100</td><td>2</td><td>OK: 부모 100의 두 번째 자식</td></tr>
+      <tr><td>200</td><td>1</td><td>불가: 자식 1이 이미 부모 100에 속함</td></tr>
+    </table>
+    <p>"N 쪽"이란 <strong>여러 개가 될 수 있는 쪽</strong>, 즉 자식이다. 여러 개인 쪽의 값이 연결 테이블에서 중복되면 안 된다는 것이 핵심이다.</p>
+    <p>위 코드박스의 <code>@OneToMany</code> + <code>@JoinTable</code>이 이 경우다.</p>`,
+  jtn1: `
+    <h5>N:1 조인 테이블</h5>
+    <p>1:N을 <strong>자식 쪽에서 바라본 것</strong>일 뿐이라 <strong>테이블 구조와 제약은 1:N과 완전히 같다</strong> (<code>CHILD_ID</code> 유니크).</p>
+    <p>달라지는 것은 <strong>매핑 코드를 어느 엔티티에 쓰느냐</strong>다. <code>Child</code>에서 매핑하면 "현재 엔티티"가 <code>Child</code>가 되므로 <code>joinColumns</code>와 <code>inverseJoinColumns</code>가 서로 바뀐다.</p>
+<pre><code>// Child 엔티티
+@ManyToOne
+@JoinTable(name = "PARENT_CHILD",
+    joinColumns = @JoinColumn(name = "CHILD_ID"),          // 나(Child)
+    inverseJoinColumns = @JoinColumn(name = "PARENT_ID"))  // 상대(Parent)
+private Parent parent;
+
+// Parent 엔티티 (양방향으로 쓸 때)
+@OneToMany(mappedBy = "parent")
+private List&lt;Child&gt; children = new ArrayList&lt;&gt;();</code></pre>`,
+  jtnm: `
+    <h5>N:M 조인 테이블</h5>
+    <p>부모 하나는 자식 <strong>여러 명</strong>, 자식 하나도 부모 <strong>여러 명</strong>과 연결된다. (예: 학생 ↔ 강의)</p>
+    <p>그래서 <code>PARENT_ID</code>, <code>CHILD_ID</code> 각각은 몇 번이든 나올 수 있다. 다만 <strong>같은 조합이 두 번 들어가면 안 된다</strong> → <strong>두 컬럼을 합친 복합 유니크(보통 복합 PK)</strong>.</p>
+    <table>
+      <tr><th>PARENT_ID</th><th>CHILD_ID</th><th></th></tr>
+      <tr><td>100</td><td>1</td><td>OK</td></tr>
+      <tr><td>100</td><td>2</td><td>OK: 부모 100의 다른 자식</td></tr>
+      <tr><td>200</td><td>1</td><td>OK: 자식 1의 다른 부모</td></tr>
+      <tr><td>100</td><td>1</td><td>불가: 같은 연결 중복</td></tr>
+    </table>
+<pre><code>@ManyToMany
+@JoinTable(name = "PARENT_CHILD",
+    joinColumns = @JoinColumn(name = "PARENT_ID"),
+    inverseJoinColumns = @JoinColumn(name = "CHILD_ID"))
+private List&lt;Child&gt; children = new ArrayList&lt;&gt;();</code></pre>
+    <p>실무에서는 연결 테이블에 등록일 같은 컬럼이 곧 필요해지므로, <code>@ManyToMany</code> 대신 <strong>연결 엔티티 + <code>@ManyToOne</code> 두 개</strong>로 푸는 것을 권장한다.</p>`,
+  promoteEntity: `
+    <h5>연결 엔티티 + @ManyToOne 두 개</h5>
+    <p>예시: 학생 ↔ 강의 (N:M)</p>
+    <p><strong>1. @ManyToMany 방식의 한계</strong></p>
+<pre><code>@ManyToMany
+@JoinTable(name = "STUDENT_COURSE",
+    joinColumns = @JoinColumn(name = "STUDENT_ID"),
+    inverseJoinColumns = @JoinColumn(name = "COURSE_ID"))
+private List&lt;Course&gt; courses = new ArrayList&lt;&gt;();</code></pre>
+    <p>연결 테이블 <code>STUDENT_COURSE</code>에는 엔티티가 없다. "수강 신청일, 성적도 저장해야 한다"는 요구가 오면 <code>ENROLLED_AT</code>, <code>GRADE</code> 컬럼을 <strong>매핑할 클래스 자체가 없다</strong>.</p>
+    <p><strong>2. 연결 테이블을 엔티티로 승격</strong></p>
+<pre><code>@Entity
+public class Enrollment {               // 연결 엔티티 (수강)
+    @Id @GeneratedValue
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "STUDENT_ID")
+    private Student student;            // @ManyToOne 1
+
+    @ManyToOne
+    @JoinColumn(name = "COURSE_ID")
+    private Course course;              // @ManyToOne 2
+
+    private LocalDateTime enrolledAt;   // 추가 컬럼 자유롭게
+    private String grade;
+}
+
+@Entity
+public class Student {
+    @OneToMany(mappedBy = "student")
+    private List&lt;Enrollment&gt; enrollments = new ArrayList&lt;&gt;();
+}</code></pre>
+    <p><strong>3. 관계를 쪼갠 것</strong></p>
+<pre><code>Student  N:M  Course
+        ↓ 풀어서
+Student  1:N  Enrollment  N:1  Course</code></pre>
+    <p><strong>4. 권장하는 이유</strong></p>
+    <ul>
+      <li><strong>컬럼 추가가 자유롭다</strong> — 신청일, 성적, 상태 등 필드만 추가하면 됨</li>
+      <li><strong>연결 자체를 조회할 수 있다</strong> — "9월에 신청된 수강 목록" 같은 쿼리 가능</li>
+      <li><strong>SQL이 예측 가능하다</strong> — <code>@ManyToMany</code>는 컬렉션 수정 시 연결 테이블 행을 전부 지우고 다시 넣는 경우가 있음</li>
+      <li><strong>도메인 개념이 드러난다</strong> — "학생-강의 연결"보다 "수강(Enrollment)"이 의미 있음</li>
+    </ul>
+    <p>연결 테이블에는 결국 컬럼이 추가되는 경우가 대부분이라, 실무에서는 <strong>처음부터 <code>@ManyToMany</code>를 쓰지 않는 것</strong>이 일반적이다.</p>`,
+  singlePerf: `
+    <h5>조인 전략과 SQL 비교</h5>
+    <p><strong>1. 자식 타입 조회</strong> — <code>em.find(Album.class, 1L)</code></p>
+<pre><code>-- 조인 전략: 부모 + 자식 조인
+select i.ITEM_ID, i.NAME, i.PRICE, a.ARTIST
+from ALBUM a
+inner join ITEM i on a.ITEM_ID = i.ITEM_ID
+where a.ITEM_ID = 1;
+
+-- 단일 테이블: 테이블 하나만 조회
+select ITEM_ID, NAME, PRICE, ARTIST
+from ITEM
+where ITEM_ID = 1 and DTYPE = 'A';</code></pre>
+    <p><strong>2. 부모 타입 조회</strong> — <code>select i from Item i</code> (차이가 가장 큰 경우)</p>
+<pre><code>-- 조인 전략: 모든 자식 테이블과 outer join
+select i.*, a.ARTIST, m.DIRECTOR, m.ACTOR,
+       case when a.ITEM_ID is not null then 'Album'
+            when m.MOVIE_ID is not null then 'Movie' end as clazz
+from ITEM i
+left outer join ALBUM a on i.ITEM_ID = a.ITEM_ID
+left outer join MOVIE m on i.ITEM_ID = m.MOVIE_ID;
+
+-- 단일 테이블: 그냥 전체 조회
+select * from ITEM;</code></pre>
+    <p>조인 전략은 <strong>자식 타입 수만큼 outer join이 늘어난다</strong>.</p>
+    <p><strong>3. 저장</strong> — 조인 전략은 INSERT 2번, 단일 테이블은 1번</p>
+    <table>
+      <tr><th></th><th>조인 전략</th><th>단일 테이블</th></tr>
+      <tr><td>자식 조회</td><td>inner join 1번</td><td>조인 없음</td></tr>
+      <tr><td>부모 타입 조회</td><td>자식 수만큼 outer join</td><td>조인 없음</td></tr>
+      <tr><td>저장</td><td>INSERT 2번</td><td>INSERT 1번</td></tr>
+    </table>
+    <p><strong>주의</strong>: "가장 빠름"이 항상 참은 아니다. PK 조인은 인덱스를 타므로 데이터가 적으면 차이가 미미하다.
+    또 자식 타입과 컬럼이 많아지면 행이 넓어지고 null 컬럼이 가득해져 테이블이 커지므로, 오히려 느려질 수 있다.</p>`
+};
+
+const tip = document.getElementById('tip');
+const body = tip.querySelector('.tip-body');
+let current = null;
+
+function hide() {
+  tip.classList.remove('show');
+  if (current) current.classList.remove('active');
+  current = null;
+}
+
+function show(el) {
+  body.innerHTML = TIPS[el.dataset.tip] || '';
+  tip.classList.add('show');
+  el.classList.add('active');
+  current = el;
+
+  const r = el.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  let left = r.left + window.scrollX;
+  const maxLeft = window.scrollX + document.documentElement.clientWidth - w - 16;
+  left = Math.max(window.scrollX + 16, Math.min(left, maxLeft));
+  tip.style.left = left + 'px';
+  tip.style.top = (r.bottom + window.scrollY + 8) + 'px';
+}
+
+document.querySelectorAll('a.anno, .anno-btn').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (current === a) hide();
+    else { if (current) current.classList.remove('active'); show(a); }
+  });
+});
+
+tip.addEventListener('click', e => e.stopPropagation());
+tip.querySelector('.close').addEventListener('click', hide);
+document.addEventListener('click', hide);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') hide(); });
+window.addEventListener('resize', () => { if (current) show(current); });
+</script>
+</body>
+</html>
