@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JPA 심화 - 실무적인 고민</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<style>
+:root {
+  --page: #EEF1F5;
+  --sheet: #FFFFFF;
+  --ink: #17212E;
+  --ink-2: #4A5668;
+  --ink-3: #8592A3;
+  --rule: #DDE2EA;
+  --cobalt: #2747D6;
+  --cobalt-wash: #EAEEFD;
+  --amber: #A85B06;
+  --amber-wash: #FFF6E8;
+  --panel: #17212E;
+  --panel-head: #1F2B3A;
+  --panel-text: #C9D3E0;
+  --panel-dim: #7D8A9C;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #0D131A;
+    --sheet: #131B24;
+    --ink: #E4E9F0;
+    --ink-2: #A9B4C3;
+    --ink-3: #6E7B8C;
+    --rule: #233041;
+    --cobalt: #8EA5FF;
+    --cobalt-wash: #18224A;
+    --amber: #F0B35F;
+    --amber-wash: #2A1F10;
+    --panel: #0A0F15;
+    --panel-head: #111922;
+    --panel-text: #C9D3E0;
+    --panel-dim: #6E7B8C;
+  }
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font-family: "IBM Plex Sans KR", system-ui, sans-serif;
+  font-size: 16.5px;
+  line-height: 1.8;
+  word-break: keep-all;
+  overflow-x: hidden;
+}
+::selection { background: var(--cobalt); color: #fff; }
+
+.sheet {
+  max-width: 900px;
+  margin: 40px auto 80px;
+  background: var(--sheet);
+  border-radius: 4px;
+  padding: 72px 0 64px;
+}
+.wrap { padding: 0 16px; }
+@media (min-width: 960px) {
+  .wrap { display: grid; grid-template-columns: 140px 680px; padding: 0 40px 0 40px; }
+  .wrap > .body { grid-column: 2; }
+  .gutter { grid-column: 1; }
+}
+@media (max-width: 959px) {
+  .sheet { margin: 0; border-radius: 0; padding-top: 48px; }
+}
+
+/* ── Hero ── */
+.hero h1 {
+  font-size: clamp(34px, 6vw, 52px);
+  line-height: 1.15;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0 0 40px;
+}
+.hero .lede { color: var(--ink-2); font-size: 18px; margin: 0 0 44px; max-width: 34em; }
+
+.toc { list-style: none; padding: 0; margin: 0; border-top: 1.5px solid var(--ink); }
+.toc li { border-bottom: 1px solid var(--rule); }
+.toc a {
+  display: grid; grid-template-columns: 44px 1fr; gap: 4px 0;
+  padding: 16px 0; color: inherit; text-decoration: none;
+}
+.toc .n { color: var(--cobalt); font-weight: 600; }
+.toc .t { font-weight: 600; font-size: 17px; }
+.toc .s { grid-column: 2; color: var(--ink-3); font-family: "IBM Plex Mono", monospace; font-size: 13px; line-height: 1.5; }
+.toc a:hover .t { color: var(--cobalt); }
+.toc a:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 4px; }
+
+/* ── Sections ── */
+section { margin-top: 96px; }
+.num {
+  font-size: 64px; line-height: 1; font-weight: 700; letter-spacing: -0.04em;
+  color: var(--cobalt); position: sticky; top: 36px;
+}
+@media (max-width: 959px) { .num { position: static; font-size: 40px; margin-bottom: 8px; } }
+
+h2 { font-size: 28px; line-height: 1.3; letter-spacing: -0.025em; margin: 0 0 20px; font-weight: 700; }
+h3 { font-size: 17px; margin: 40px 0 6px; font-weight: 600; }
+p { margin: 8px 0; }
+b { font-weight: 600; }
+.c {
+  font-family: "IBM Plex Mono", monospace; font-size: .86em;
+  background: var(--cobalt-wash); color: var(--cobalt);
+  padding: 1px 6px; border-radius: 3px;
+}
+
+/* 증상 로그 줄 */
+.symptom {
+  margin: 20px 0 8px;
+  border-left: 3px solid var(--amber);
+  background: var(--amber-wash);
+  padding: 12px 16px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13.5px; line-height: 1.7;
+  color: var(--amber);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* 원칙 */
+.rule {
+  margin: 28px 0 0;
+  padding: 18px 0 0;
+  border-top: 1.5px solid var(--ink);
+  font-weight: 500;
+}
+.rule::before { content: "정리  "; color: var(--cobalt); font-weight: 600; }
+
+/* 표 */
+table { width: 100%; border-collapse: collapse; font-size: 14.5px; margin: 16px 0; }
+th { text-align: left; font-weight: 500; color: var(--ink-3); padding: 8px 12px 8px 0; border-bottom: 1.5px solid var(--ink); }
+td { padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+
+ul { padding-left: 1.1em; margin: 8px 0; }
+li { margin: 6px 0; }
+li::marker { color: var(--cobalt); }
+
+/* ── 코드 패널 ── */
+.code {
+  --closed: 132px;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  margin: 18px 0;
+  background: var(--panel);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: width .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s ease;
+}
+.code.open { width: calc(100vw - 32px); box-shadow: 0 24px 60px -20px rgba(15,25,45,.45); }
+@media (min-width: 960px) { .code.open { width: min(880px, calc(100vw - 200px)); } }
+
+.code-head {
+  all: unset; box-sizing: border-box;
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--panel-head);
+  color: var(--panel-text);
+  font-size: 13.5px; font-weight: 500;
+  cursor: pointer;
+}
+.code-head:focus-visible { outline: 2px solid var(--cobalt); outline-offset: -2px; }
+.code-head .label { flex: 1; }
+.code-head .meta { color: var(--panel-dim); font-size: 12.5px; font-weight: 400; }
+.code-head .chev {
+  width: 18px; height: 18px; flex: none;
+  transition: transform .4s cubic-bezier(.2,.8,.2,1);
+  stroke: var(--panel-dim);
+}
+.code.open .chev { transform: rotate(180deg); }
+
+.code-body {
+  position: relative;
+  max-height: var(--closed);
+  overflow: hidden;
+  cursor: pointer;
+  transition: max-height .4s cubic-bezier(.2,.8,.2,1);
+}
+.code-body::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 56px;
+  background: linear-gradient(rgba(23,33,46,0), var(--panel));
+  pointer-events: none; transition: opacity .3s;
+}
+.code.open .code-body { cursor: auto; }
+.code.open .code-body::after, .code.short .code-body::after { opacity: 0; }
+.code.short .code-head { cursor: default; }
+.code.short .chev { display: none; }
+
+.code pre { margin: 0; }
+.code pre code.hljs {
+  display: block;
+  background: transparent;
+  color: var(--panel-text);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13.5px; line-height: 1.7;
+  padding: 16px 18px 18px;
+  overflow-x: auto;
+  transition: font-size .4s ease;
+}
+.code.open pre code.hljs { font-size: 14.5px; }
+
+/* 체크리스트 */
+.checks { list-style: none; padding: 0; margin: 20px 0 0; counter-reset: c; }
+.checks li {
+  display: flex; gap: 14px; align-items: baseline;
+  padding: 12px 0; margin: 0; border-bottom: 1px solid var(--rule);
+}
+.checks li::before {
+  content: ""; flex: none; width: 14px; height: 14px; border: 1.5px solid var(--ink-3);
+  border-radius: 3px; transform: translateY(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<article class="sheet">
+
+  <header class="wrap hero">
+    <div class="body">
+      <h1>JPA 심화 - 실무적인 고민</h1>
+      <ol class="toc">
+        <li><a href="#n1"><span class="n">1)</span><span class="t">N+1 문제를 해결하는 방법</span><span class="s">select ... from team where id = ?   × 20</span></a></li>
+        <li><a href="#fetch"><span class="n">2)</span><span class="t">컬렉션 fetch join과 페이징</span><span class="s">HHH90003004 ... applying in memory</span></a></li>
+        <li><a href="#offset"><span class="n">3)</span><span class="t">깊은 페이징 문제</span><span class="s">rows examined 1,000,020 / returned 20</span></a></li>
+      </ol>
+    </div>
+  </header>
+
+  <!-- 1 -->
+  <section id="n1" class="wrap">
+    <div class="gutter"><div class="num">1)</div></div>
+    <div class="body">
+      <h2>N+1 문제를 해결하는 방법</h2>
+
+      <div class="code" data-label="상황">
+<pre><code class="language-java">// Member.java (엔티티)
+@Entity
+public class Member {
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Team team;
+}
+
+// MemberService.java
+@Transactional(readOnly = true)
+public Page&lt;MemberDto&gt; list(Pageable pageable) {
+    return memberRepository.findAll(pageable)
+            .map(MemberDto::new);
+}
+
+// MemberDto.java
+public class MemberDto {
+    public MemberDto(Member m) {
+        this.name = m.getName();
+        this.teamName = m.getTeam().getName();   // ← 여기서 쿼리 발생
+    }
+}</code></pre>
+      </div>
+
+<div class="symptom">select ... from member limit 20
+select count(m.id) from member
+select ... from team where id = ?
+select ... from team where id = ?
+...                                  최대 20번 반복</div>
+
+      <p>LAZY 프록시를 루프에서 하나씩 초기화하기 때문입니다. 같은 팀은 1차 캐시에서 꺼내므로 실제 횟수는 <b>서로 다른 팀 수</b>만큼입니다. 팀이 몇 개 없는 로컬에서는 안 보이다가 운영에서 터지는 이유입니다.</p>
+
+      <h3>해결 방법</h3>
+      <table>
+        <tr><th>방법</th><th>장점</th><th>단점</th></tr>
+        <tr><td>@EntityGraph</td><td>한 줄로 끝</td><td>복잡한 조건엔 한계</td></tr>
+        <tr><td>fetch join</td><td>쿼리 1번</td><td>countQuery 분리 필요</td></tr>
+        <tr><td>DTO 직접 조회</td><td>필요한 컬럼만, 가장 가벼움</td><td>변경 감지 불가, 재사용성 낮음</td></tr>
+        <tr><td>batch_fetch_size</td><td>코드 변경 없음</td><td>N번을 1번으로 묶을 뿐, 0은 아님</td></tr>
+      </table>
+
+      <div class="code" data-label="@EntityGraph와 fetch join">
+<pre><code class="language-java">// MemberRepository.java
+public interface MemberRepository extends JpaRepository&lt;Member, Long&gt; {
+
+    // ToOne이라 페이징과 같이 써도 안전
+    @EntityGraph(attributePaths = "team")
+    Page&lt;Member&gt; findAll(Pageable pageable);
+
+    // fetch join은 count 쿼리에 쓸 수 없으므로 분리
+    @Query(value = "select m from Member m join fetch m.team",
+           countQuery = "select count(m) from Member m")
+    Page&lt;Member&gt; findAllWithTeam(Pageable pageable);
+}</code></pre>
+      </div>
+
+      <div class="code" data-label="DTO 직접 조회와 배치 페치">
+<pre><code class="language-java">// MemberRepositoryCustomImpl.java
+public class MemberRepositoryCustomImpl implements MemberRepositoryCustom {
+
+    public List&lt;MemberDto&gt; findMembers(Pageable pageable) {
+        return queryFactory
+                .select(new QMemberDto(member.name, team.name))
+                .from(member)
+                .join(member.team, team)
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+    }
+}
+
+// application.yml
+// spring.jpa.properties.hibernate.default_batch_fetch_size: 100
+// → where team_id in (?, ?, ...) 한 번으로 묶어서 조회</code></pre>
+      </div>
+
+      <p class="rule">batch_fetch_size는 전역으로 깔아두고(안전망), 핵심 조회만 fetch join이나 DTO 조회로 명시적으로 최적화한다.</p>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section id="fetch" class="wrap">
+    <div class="gutter"><div class="num">2)</div></div>
+    <div class="body">
+      <h2>컬렉션 fetch join과 페이징</h2>
+      <p>1)에서 회원은 팀을 하나만 가지니까, 회원 20명을 팀과 fetch join해도 결과는 딱 20줄이었습니다. 그래서 페이징이 문제없이 됐죠.</p>
+      <p>이번엔 반대입니다. 주문 하나에는 주문상품이 <b>여러 개</b> 있습니다. 주문 목록에 상품까지 한 번에 보여주려고 같은 방식으로 fetch join을 걸면 함정에 빠집니다.</p>
+
+      <div class="code" data-label="상황">
+<pre><code class="language-java">// OrderRepositoryCustomImpl.java
+public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
+
+    public List&lt;Order&gt; findOrders() {
+        return queryFactory
+                .selectFrom(order)
+                .join(order.orderItems, orderItem).fetchJoin()   // OneToMany
+                .offset(0)
+                .limit(20)
+                .fetch();
+        // 로컬: 정상, 20건 반환
+        // 운영: OOM
+    }
+}</code></pre>
+      </div>
+
+<div class="symptom">WARN HHH90003004: firstResult/maxResults specified with collection fetch;
+                 applying in memory</div>
+
+      <h3>조인하면 줄이 불어난다</h3>
+      <p>주문 1번에 상품이 3개면, 조인 결과에서 주문 1번은 3줄로 나옵니다. 결과가 주문 단위가 아니라 <b>상품 단위</b>로 늘어나는 거죠.</p>
+      <table>
+        <tr><th>주문</th><th>상품</th></tr>
+        <tr><td>1번</td><td>키보드</td></tr>
+        <tr><td>1번</td><td>마우스</td></tr>
+        <tr><td>1번</td><td>모니터</td></tr>
+        <tr><td>2번</td><td>노트북</td></tr>
+        <tr><td>…</td><td>…</td></tr>
+      </table>
+      <p>이 상태에서 DB에 <span class="c">limit 20</span>을 걸면 주문 20개가 아니라 <b>줄 20개</b>가 잘립니다. 주문 4~5개에서 끝나고, 마지막 주문은 상품이 몇 개 잘린 채로 올 수도 있습니다.</p>
+
+      <h3>그래서 Hibernate는 메모리에서 자른다</h3>
+      <p>Hibernate는 데이터가 망가지는 걸 막으려고 SQL에 <span class="c">limit</span>을 <b>안 붙입니다.</b> 대신 전체를 다 가져온 다음 자바 메모리에서 주문 20개를 골라냅니다. 결과는 정확해서 로컬 테스트에선 아무 문제가 없어 보입니다.</p>
+      <p>하지만 운영에 주문이 100만 건이면, 화면에 20개 보여주려고 100만 건과 그 상품 전부를 메모리에 올립니다. 그러다 서버가 터집니다. 에러도 없이 위의 경고 한 줄만 남아서 알아채기 어렵습니다.</p>
+      <p>해결의 핵심은 <b>주문만 먼저 20개 정확히 가져오고, 그 20개의 상품은 따로 한 번에 가져오는 것</b>입니다.</p>
+
+      <h3>해결 방법</h3>
+      <div class="code" data-label="ToOne만 fetch join, 컬렉션은 배치 페치" data-note="가장 일반적">
+<pre><code class="language-java">// OrderRepositoryCustomImpl.java
+public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
+
+    public List&lt;Order&gt; findOrders(Pageable pageable) {
+        return queryFactory
+                .selectFrom(order)
+                .join(order.member, member).fetchJoin()   // ManyToOne: 행이 안 늘어남
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())            // SQL limit 정상 적용
+                .fetch();
+    }
+}
+
+// 이후 서비스에서 orderItems 접근 시 batch_fetch_size에 의해
+// select ... from order_item where order_id in (?, ... 20개)
+// → 주문 1번 + 상품 1번 = 총 2번</code></pre>
+      </div>
+
+      <div class="code" data-label="id만 먼저 페이징한 뒤 fetch join">
+<pre><code class="language-java">// OrderRepositoryCustomImpl.java
+public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
+
+    public List&lt;Order&gt; findOrdersWithItems(Pageable pageable) {
+        // 1단계: 주문 id만 페이징 (행이 안 늘어나서 limit 정상 적용)
+        List&lt;Long&gt; ids = queryFactory
+                .select(order.id).from(order)
+                .orderBy(order.orderDate.desc())
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
+                .fetch();
+
+        // 2단계: 그 id들만 컬렉션 fetch join
+        return queryFactory
+                .selectFrom(order)
+                .join(order.orderItems, orderItem).fetchJoin()
+                .where(order.id.in(ids))
+                .orderBy(order.orderDate.desc())
+                .fetch();
+    }
+}</code></pre>
+      </div>
+
+      <div class="code" data-label="예방: 경고 대신 예외로 바꾸기">
+<pre><code class="language-yaml"># application.yml
+spring:
+  jpa:
+    properties:
+      hibernate:
+        query:
+          fail_on_pagination_over_collection_fetch: true</code></pre>
+      </div>
+
+      <p class="rule">하나짜리 연관을 fetch join하면 줄 수가 그대로라 페이징이 되고, 여러 개짜리 연관(컬렉션)을 fetch join하면 줄이 불어나서 DB 페이징이 불가능해진다.</p>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="offset" class="wrap">
+    <div class="gutter"><div class="num">3)</div></div>
+    <div class="body">
+      <h2>깊은 페이징 문제</h2>
+
+      <div class="code" data-label="상황 (주문 1천만 건)">
+<pre><code class="language-sql">select * from orders
+order by order_date desc
+limit 20 offset 1000000;</code></pre>
+      </div>
+
+<div class="symptom">page 1       →     5 ms
+page 50,000  →  3,200 ms     rows examined 1,000,020 / returned 20</div>
+
+      <p>offset은 건너뛰기가 아니라 <b>읽고 버리기</b>입니다. 1,000,020행을 읽은 뒤 앞의 100만 행을 버립니다. 뒤 페이지일수록 선형으로 느려집니다.</p>
+      <p><span class="c">Slice</span>로 바꿔도 해결되지 않습니다. Slice가 없애는 건 count 쿼리뿐이고, 목록 쿼리는 여전히 offset입니다.</p>
+
+      <h3>해결: 키셋(no-offset) 페이징</h3>
+      <p>offset이 "300페이지 펴줘" 하면 1페이지부터 넘겨서 찾아가는 방식이라면, 키셋은 <b>책갈피를 꽂아두고 거기서부터 읽는 방식</b>입니다.</p>
+      <p>첫 요청은 조건 없이 최신순 20개를 가져옵니다. 클라이언트는 그중 마지막 주문의 날짜와 id를 책갈피로 기억해 두었다가, 다음 요청 때 같이 보냅니다. 서버는 "그보다 오래된 주문"에서 다시 20개를 가져옵니다. 날짜·id 인덱스가 있으면 책갈피 위치를 바로 찾아가므로 몇 페이지든 속도가 같습니다.</p>
+
+      <div class="code" data-label="키셋 페이징과 인덱스">
+<pre><code class="language-java">// OrderRepositoryCustomImpl.java
+public class OrderRepositoryCustomImpl implements OrderRepositoryCustom {
+
+    // lastDate, lastId = 클라이언트가 마지막으로 받은 행의 값
+    public List&lt;OrderDto&gt; findNext(LocalDateTime lastDate, Long lastId, int size) {
+        return queryFactory
+                .select(new QOrderDto(order.id, order.status, order.orderDate))
+                .from(order)
+                .where(cursor(lastDate, lastId))
+                .orderBy(order.orderDate.desc(), order.id.desc())   // id = tie-breaker
+                .limit(size)
+                .fetch();
+    }
+
+    private BooleanExpression cursor(LocalDateTime lastDate, Long lastId) {
+        if (lastDate == null || lastId == null) return null;   // 첫 페이지
+        return order.orderDate.lt(lastDate)
+                .or(order.orderDate.eq(lastDate).and(order.id.lt(lastId)));
+    }
+}
+
+// DB 인덱스
+// create index idx_orders_date_id on orders (order_date desc, id desc);</code></pre>
+      </div>
+
+      <table>
+        <tr><th></th><th>offset</th><th>키셋</th></tr>
+        <tr><td>깊은 페이지</td><td>점점 느려짐</td><td>일정</td></tr>
+        <tr><td>37페이지로 점프</td><td>가능</td><td>불가능</td></tr>
+        <tr><td>조회 중 데이터 추가</td><td>중복·누락</td><td>안정적</td></tr>
+        <tr><td>어울리는 UI</td><td>페이지 번호</td><td>더보기, 무한 스크롤</td></tr>
+      </table>
+
+      <p>조건이 두 줄인 이유는 날짜가 같은 주문 때문입니다. 10시 정각 주문이 3개인데 그중 하나까지만 봤다면, "10시보다 이전"만 걸었을 때 나머지 2개를 건너뜁니다. 그래서 <b>"날짜가 같으면 id가 더 작은 것"</b>까지 조건에 넣고, 정렬에도 <span class="c">id</span>를 보조 기준(tie-breaker)으로 붙입니다.</p>
+
+      <h3>페이지 번호 UI를 꼭 유지해야 한다면</h3>
+      <ul>
+        <li><b>커버링 인덱스로 id만 먼저 찾기.</b> 100만 행을 읽는 건 같지만 인덱스만 읽어서 훨씬 빠릅니다.</li>
+        <li><b>페이지 수 제한.</b> 최대 N페이지까지만 노출합니다. 5만 페이지를 넘기는 건 대부분 크롤러입니다.</li>
+        <li><b>검색 조건 강제.</b> 기간 필터를 필수로 받아 범위 자체를 줄입니다.</li>
+      </ul>
+
+      <div class="code" data-label="커버링 인덱스로 id 먼저 찾기">
+<pre><code class="language-sql">select o.*
+from orders o
+join (
+    select id from orders
+    order by order_date desc, id desc
+    limit 20 offset 1000000      -- 인덱스만 읽음
+) t on o.id = t.id;              -- 테이블 접근은 20행뿐</code></pre>
+      </div>
+
+      <p class="rule">무한 스크롤은 키셋, 페이지 번호가 필요하면 커버링 인덱스와 페이지 제한.</p>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="gutter"></div>
+    <div class="body">
+      <h2>코드 리뷰할 때 볼 것</h2>
+      <ul class="checks">
+        <li>목록 조회 후 map이나 루프에서 연관 엔티티에 접근하는가</li>
+        <li>컬렉션 fetch join에 페이징이 붙어 있는가</li>
+        <li>fetch join 쿼리에 countQuery가 분리되어 있는가</li>
+        <li>정렬에 유일 컬럼이 포함되어 있는가</li>
+        <li>무한 스크롤인데 offset을 쓰고 있지 않은가</li>
+      </ul>
+    </div>
+  </section>
+
+</article>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  if (window.hljs) hljs.highlightAll();
+
+  var chev = '<svg class="chev" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+
+  document.querySelectorAll('.code').forEach(function (box) {
+    var pre = box.querySelector('pre');
+    var lines = pre.textContent.replace(/\n$/, '').split('\n').length;
+
+    var head = document.createElement('button');
+    head.className = 'code-head';
+    head.type = 'button';
+    head.innerHTML =
+      '<span class="label">' + (box.dataset.label || '코드') + '</span>' +
+      '<span class="meta">' + (box.dataset.note ? box.dataset.note + '  ·  ' : '') + lines + '줄</span>' + chev;
+
+    var body = document.createElement('div');
+    body.className = 'code-body';
+    box.insertBefore(head, pre);
+    body.appendChild(pre);
+    box.appendChild(body);
+
+    var closed = parseInt(getComputedStyle(box).getPropertyValue('--closed'), 10);
+
+    if (pre.scrollHeight <= closed + 6) {
+      box.classList.add('short');
+      body.style.maxHeight = 'none';
+      head.tabIndex = -1;
+      return;
+    }
+
+    head.setAttribute('aria-expanded', 'false');
+
+    function open() {
+      box.classList.add('open');
+      head.setAttribute('aria-expanded', 'true');
+      requestAnimationFrame(function () {
+        body.style.maxHeight = body.scrollHeight + 'px';
+      });
+      body.addEventListener('transitionend', function done(e) {
+        if (e.propertyName !== 'max-height') return;
+        if (box.classList.contains('open')) body.style.maxHeight = 'none';
+        body.removeEventListener('transitionend', done);
+      });
+    }
+    function close() {
+      body.style.maxHeight = body.scrollHeight + 'px';
+      void body.offsetHeight;
+      box.classList.remove('open');
+      head.setAttribute('aria-expanded', 'false');
+      body.style.maxHeight = '';
+    }
+
+    head.addEventListener('click', function () {
+      box.classList.contains('open') ? close() : open();
+    });
+    body.addEventListener('click', function () {
+      if (!box.classList.contains('open')) open();
+    });
+  });
+})();
+</script>
+</body>
+</html>
